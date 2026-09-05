@@ -1,0 +1,558 @@
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 222 24% 4%;
+    --foreground: 0 0% 96%;
+
+    --card: 220 18% 9%;
+    --card-foreground: 210 20% 93%;
+
+    --popover: 220 18% 9%;
+    --popover-foreground: 210 20% 93%;
+
+    --primary: 230 90% 70%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 15% 14%;
+    --secondary-foreground: 210 20% 85%;
+
+    --muted: 220 14% 12%;
+    --muted-foreground: 215 16% 62%;
+
+    --accent: 230 60% 50%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 14% 19%;
+    --input: 220 15% 15%;
+    --ring: 230 90% 70%;
+
+    --radius: 0.75rem;
+
+    /* Product accent colors */
+    --structera: 230 90% 60%;
+    --crows: 350 80% 55%;
+    --bhoomi: 160 70% 45%;
+    --foodie: 170 65% 45%;
+    --hotel: 35 85% 55%;
+    --sraiauctions: 45 95% 55%;
+    --modguardian: 25 90% 55%;
+    --sraiquant: 190 85% 55%;
+
+    /* ── Elevation ──────────────────────────────────────────────
+       On a dark ground, a raised surface gets LIGHTER, not darker —
+       the opposite of the light-mode instinct. Four steps, used in
+       order: page → panel → card → raised. Never skip a step, and
+       never stack two surfaces of the same level. */
+    --surface-0: 222 24% 4%;    /* page ground */
+    --surface-1: 220 18% 7%;    /* section panel */
+    --surface-2: 220 16% 10%;   /* card */
+    --surface-3: 220 15% 13.5%; /* raised: hover, popover, active demo */
+
+    /* Hairlines, also stepped so borders read against their own surface */
+    --line-soft: 220 14% 16%;
+    --line: 220 14% 19%;
+    --line-strong: 220 13% 26%;
+
+    /* Motion — smooth for enterprise credibility, not springy */
+    --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+    --dur-fast: 140ms;
+    --dur: 260ms;
+    --dur-slow: 620ms;
+
+    /* Glow effects */
+    --glow-primary: 0 0 60px hsl(230 90% 60% / 0.3);
+    --glow-soft: 0 0 40px hsl(230 90% 60% / 0.15);
+
+    --sidebar-background: 220 20% 8%;
+    --sidebar-foreground: 210 20% 85%;
+    --sidebar-primary: 230 90% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 15% 16%;
+    --sidebar-accent-foreground: 210 20% 85%;
+    --sidebar-border: 220 15% 18%;
+    --sidebar-ring: 230 90% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'DM Sans', system-ui, sans-serif;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 20% 20%, rgba(99, 102, 241, 0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 80% 60%, rgba(139, 92, 246, 0.05) 0%, transparent 60%),
+      radial-gradient(ellipse 70% 60% at 50% 100%, rgba(56, 189, 248, 0.04) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+    animation: aurora-slow 16s ease-in-out infinite alternate;
+  }
+  
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: radial-gradient(circle, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 28px 28px;
+    pointer-events: none;
+    z-index: 0;
+  }
+  
+  @keyframes aurora-slow {
+    0% { opacity: 0.6; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.05); }
+    100% { opacity: 0.7; transform: scale(0.98); }
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Syne', system-ui, sans-serif;
+    @apply font-bold tracking-tight;
+  }
+
+  code, pre {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+@layer utilities {
+  /* Aurora background blobs */
+  .aurora-blob {
+    @apply absolute rounded-full blur-3xl opacity-20 pointer-events-none;
+    animation: aurora-drift 20s ease-in-out infinite alternate;
+  }
+
+  @keyframes aurora-drift {
+    0% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(30px, -20px) scale(1.1); }
+    66% { transform: translate(-20px, 20px) scale(0.9); }
+    100% { transform: translate(10px, -10px) scale(1.05); }
+  }
+
+  /* Scanline overlay */
+  .scanlines::after {
+    content: '';
+    @apply absolute inset-0 pointer-events-none;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      hsl(220 20% 6% / 0.03) 2px,
+      hsl(220 20% 6% / 0.03) 4px
+    );
+    z-index: 1;
+  }
+
+  /* Noise texture overlay */
+  .noise-overlay::before {
+    content: '';
+    @apply absolute inset-0 pointer-events-none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    z-index: 1;
+  }
+
+  /* Glass effect */
+  .glass {
+    @apply backdrop-blur-xl border;
+    background: hsl(220 18% 9% / 0.55);
+    border-color: hsl(220 15% 18% / 0.5);
+  }
+
+  .glass-strong {
+    @apply backdrop-blur-2xl border;
+    background: hsl(220 18% 9% / 0.8);
+    border-color: hsl(220 15% 18% / 0.6);
+  }
+
+  /* Premium glass with inner glow */
+  .glass-premium {
+    @apply backdrop-blur-2xl border;
+    background: linear-gradient(135deg, hsl(220 18% 11% / 0.7), hsl(220 18% 8% / 0.85));
+    border-color: hsl(230 90% 60% / 0.08);
+    box-shadow:
+      inset 0 1px 0 hsl(0 0% 100% / 0.04),
+      inset 0 -1px 0 hsl(0 0% 0% / 0.2),
+      0 8px 32px hsl(0 0% 0% / 0.4),
+      0 2px 8px hsl(0 0% 0% / 0.2);
+  }
+
+  /* Product accent utilities */
+  .accent-structera { --product-accent: var(--structera); }
+  .accent-crows { --product-accent: var(--crows); }
+  .accent-bhoomi { --product-accent: var(--bhoomi); }
+  .accent-foodie { --product-accent: var(--foodie); }
+  .accent-hotel { --product-accent: var(--hotel); }
+  .accent-sraiauctions { --product-accent: var(--sraiauctions); }
+  .accent-modguardian { --product-accent: var(--modguardian); }
+  .accent-sraiquant { --product-accent: var(--sraiquant); }
+
+  /* ─── Animated gradient text ─── */
+  .gradient-text {
+    background-image: linear-gradient(135deg, #818cf8 0%, #38bdf8 40%, #a78bfa 80%, #818cf8 100%);
+    background-size: 300% 300%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: gradient-shift 5s ease infinite;
+  }
+
+  @keyframes gradient-shift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  .gradient-text-warm {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, hsl(35 85% 55%), hsl(25 90% 55%));
+  }
+
+  /* ─── Neon border glow ─── */
+  .neon-border {
+    position: relative;
+  }
+  .neon-border::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, hsl(230 90% 60% / 0.6), hsl(190 100% 60% / 0.4), hsl(260 80% 60% / 0.6));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  /* ─── Pulse ring animation ─── */
+  @keyframes pulse-ring {
+    0% { transform: scale(0.8); opacity: 0.8; }
+    100% { transform: scale(2.4); opacity: 0; }
+  }
+  .pulse-ring {
+    animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+  }
+
+  /* ─── Data stream lines ─── */
+  @keyframes stream-down {
+    0% { transform: translateY(-100%); opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { transform: translateY(100vh); opacity: 0; }
+  }
+  .data-stream {
+    animation: stream-down linear infinite;
+  }
+
+  /* ─── Shimmer sweep ─── */
+  @keyframes shimmer-sweep {
+    0% { transform: translateX(-100%) skewX(-12deg); }
+    100% { transform: translateX(200%) skewX(-12deg); }
+  }
+  .shimmer-sweep {
+    position: relative;
+    overflow: hidden;
+  }
+  .shimmer-sweep::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent 0%, hsl(0 0% 100% / 0.04) 40%, hsl(0 0% 100% / 0.08) 50%, hsl(0 0% 100% / 0.04) 60%, transparent 100%);
+    animation: shimmer-sweep 3s ease-in-out infinite;
+  }
+
+  /* ─── Status live indicator ─── */
+  .status-live {
+    position: relative;
+  }
+  .status-live::before {
+    content: '';
+    position: absolute;
+    left: -4px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: hsl(160 70% 50%);
+    animation: blink 1.5s ease-in-out infinite;
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 1; box-shadow: 0 0 6px hsl(160 70% 50%); }
+    50% { opacity: 0.3; box-shadow: none; }
+  }
+
+  /* ─── Mesh gradient background ─── */
+  .mesh-bg {
+    background:
+      radial-gradient(at 20% 20%, hsl(230 90% 60% / 0.08) 0px, transparent 50%),
+      radial-gradient(at 80% 10%, hsl(260 80% 60% / 0.06) 0px, transparent 50%),
+      radial-gradient(at 60% 80%, hsl(190 90% 50% / 0.05) 0px, transparent 50%),
+      radial-gradient(at 10% 70%, hsl(350 80% 55% / 0.04) 0px, transparent 50%);
+  }
+
+  /* ─── Card with accent line ─── */
+  .card-accent-line {
+    position: relative;
+    overflow: hidden;
+  }
+  .card-accent-line::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, hsl(230 90% 60%), transparent);
+    transform: scaleX(0);
+    transition: transform 0.4s ease;
+  }
+  .card-accent-line:hover::after {
+    transform: scaleX(1);
+  }
+
+  /* ─── Number counter animation ─── */
+  @keyframes count-up {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .count-reveal {
+    animation: count-up 0.6s ease forwards;
+  }
+
+  /* Tilt card effect */
+  .tilt-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  .tilt-card:hover {
+    transform: perspective(1000px) rotateY(-2deg) rotateX(2deg) scale(1.02);
+    box-shadow: 0 20px 40px hsl(0 0% 0% / 0.3);
+  }
+
+  /* Scroll progress bar */
+  .scroll-progress {
+    @apply fixed top-0 left-0 h-[2px] z-[100];
+    background: linear-gradient(90deg, hsl(230 90% 60%), hsl(190 100% 60%), hsl(260 80% 60%), hsl(230 90% 60%));
+    background-size: 300% 100%;
+    animation: progress-shimmer 3s linear infinite;
+  }
+
+  @keyframes progress-shimmer {
+    0% { background-position: 0% 0; }
+    100% { background-position: 300% 0; }
+  }
+
+  /* Section divider */
+  .section-divider-gradient {
+    height: 1px;
+    background: radial-gradient(ellipse at center, rgba(99,102,241,0.3) 0%, transparent 70%);
+    margin: 0 10%;
+  }
+
+  /* Glowing CTA button */
+  .btn-glow {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-glow::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    background: linear-gradient(135deg, hsl(230 90% 60%), hsl(260 80% 55%), hsl(190 90% 50%), hsl(230 90% 60%));
+    background-size: 300% 300%;
+    animation: gradient-rotate 4s linear infinite;
+    border-radius: inherit;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .btn-glow:hover::after {
+    opacity: 1;
+  }
+
+  @keyframes gradient-rotate {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  /* ─── Universal heading gradient helper ─── */
+  .heading-gradient {
+    background-image: linear-gradient(135deg, #818cf8, #38bdf8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* ─── Smooth page transitions ─── */
+  main {
+    animation: page-enter 0.4s ease forwards;
+  }
+  @keyframes page-enter {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ─── Better focus rings ─── */
+  *:focus-visible {
+    outline: 2px solid rgba(99, 102, 241, 0.6);
+    outline-offset: 3px;
+    border-radius: 6px;
+  }
+
+  /* ─── Image card overlay helpers ─── */
+  .img-overlay-dark {
+    position: relative;
+    overflow: hidden;
+  }
+  .img-overlay-dark::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent 0%, rgba(11,13,20,0.9) 100%);
+    pointer-events: none;
+  }
+
+  /* ─── Image hover zoom ─── */
+  .img-zoom img {
+    transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .img-zoom:hover img {
+    transform: scale(1.06);
+  }
+
+  /* ─── HUD corner brackets ─── */
+  .hud-bracket-tl { border-top: 1px solid rgba(99,102,241,0.3); border-left: 1px solid rgba(99,102,241,0.3); }
+  .hud-bracket-tr { border-top: 1px solid rgba(99,102,241,0.3); border-right: 1px solid rgba(99,102,241,0.3); }
+  .hud-bracket-bl { border-bottom: 1px solid rgba(99,102,241,0.3); border-left: 1px solid rgba(99,102,241,0.3); }
+  .hud-bracket-br { border-bottom: 1px solid rgba(99,102,241,0.3); border-right: 1px solid rgba(99,102,241,0.3); }
+
+  /* ─── Neon accent text ─── */
+  .text-neon-blue { color: #38bdf8; text-shadow: 0 0 20px rgba(56,189,248,0.5); }
+  .text-neon-purple { color: #818cf8; text-shadow: 0 0 20px rgba(129,140,248,0.5); }
+  .text-neon-green { color: #34d399; text-shadow: 0 0 20px rgba(52,211,153,0.4); }
+
+  /* ─── Glowing card border on hover ─── */
+  .card-glow-hover {
+    transition: box-shadow 0.4s ease, border-color 0.4s ease;
+  }
+  .card-glow-hover:hover {
+    box-shadow: 0 0 40px rgba(99,102,241,0.2), 0 8px 32px rgba(0,0,0,0.4);
+    border-color: rgba(99,102,241,0.3);
+  }
+
+  /* ─── Animated dashed border ─── */
+  @keyframes dash-move {
+    to { stroke-dashoffset: -20; }
+  }
+
+  /* ─── Terminal cursor blink ─── */
+  .cursor-blink::after {
+    content: '█';
+    animation: blink 1s step-end infinite;
+    color: #818cf8;
+    margin-left: 2px;
+    font-size: 0.8em;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+}
+::-webkit-scrollbar-track {
+  background: hsl(220 20% 5%);
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(220 15% 22%);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(230 90% 60% / 0.5);
+}
+
+/* Selection */
+::selection {
+  background: hsl(230 90% 60% / 0.3);
+  color: hsl(0 0% 100%);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   Elevation utilities
+   ═══════════════════════════════════════════════════════════════ */
+@layer components {
+  .surface-1 { background: hsl(var(--surface-1)); }
+  .surface-2 { background: hsl(var(--surface-2)); }
+  .surface-3 { background: hsl(var(--surface-3)); }
+
+  /* Panel — a section-level container. Flat, quiet, holds cards. */
+  .panel {
+    background: hsl(var(--surface-1));
+    border: 1px solid hsl(var(--line-soft));
+    border-radius: var(--radius);
+  }
+
+  /* Card — the default content tier. One step above its panel. */
+  .card-tier {
+    background: hsl(var(--surface-2));
+    border: 1px solid hsl(var(--line));
+    border-radius: var(--radius);
+    transition: background var(--dur) var(--ease-out),
+                border-color var(--dur) var(--ease-out),
+                transform var(--dur) var(--ease-out);
+  }
+  .card-tier:hover {
+    background: hsl(var(--surface-3));
+    border-color: hsl(var(--line-strong));
+  }
+
+  /* Interactive card — lifts, but only a little. */
+  .card-interactive { cursor: pointer; }
+  .card-interactive:hover { transform: translateY(-3px); }
+  .card-interactive:active { transform: translateY(-1px); }
+
+  /* Press feedback on every primary control. */
+  .press {
+    transition: transform var(--dur-fast) var(--ease-out),
+                filter var(--dur-fast) var(--ease-out);
+  }
+  .press:hover { filter: brightness(1.08); }
+  .press:active { transform: scale(0.985); }
+
+  /* Hairline that fades at both ends — used between sections. */
+  .rule-fade {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, hsl(var(--line-strong)), transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-interactive:hover,
+  .card-interactive:active,
+  .press:active { transform: none; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
