@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useParams, Link, Navigate } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { ArrowRight, ArrowUpRight, Check, ImageOff } from "lucide-react";
 import Layout from "@/components/Layout";
 import SectionReveal from "@/components/SectionReveal";
@@ -9,6 +9,7 @@ import ProductGlyph from "@/components/ProductGlyph";
 import FeatureWalkthrough from "@/components/FeatureWalkthrough";
 import { ProductDemo, hasDemo } from "@/components/demos";
 import { products, type Product } from "@/data/srai";
+import NotFound from "./NotFound";
 import { track } from "@/lib/analytics";
 
 /** Short rail labels derived from each screenshot's caption lead-in. */
@@ -38,7 +39,13 @@ const ProductDetail = () => {
     track("product_page_view", { product: product.id, status: product.status });
   }, [product]);
 
-  if (!product) return <Navigate to="/products" replace />;
+  /**
+   * An unknown slug is a 404, not a redirect. The host answers /products/nope
+   * with a real 404 status and dist/404.html; redirecting to /products here
+   * would make the client disagree with the status the visitor was served, and
+   * would tell a crawler that a dead URL is a working one.
+   */
+  if (!product) return <NotFound />;
 
   const cta = ctaFor(product);
   const accent = `hsl(${product.accentHsl})`;

@@ -176,7 +176,11 @@ const HeroSection = () => {
                 src="/screens/fundos/schemes-eligibility.webp"
                 alt="FundOS showing a startup's government grant eligibility: an estimated value range, a grant readiness score, and the requirement putting an application at risk"
                 width={1500} height={967}
-                fetchPriority="high" decoding="async"
+                /* React 18's DOM does not know the camelCase prop and warns on
+                   every render, server and client. The lowercase attribute is
+                   what the HTML spec actually defines. */
+                {...({ fetchpriority: "high" } as Record<string, string>)}
+                decoding="async"
                 onLoad={() => setLoaded(true)}
                 className="w-full h-auto block transition-opacity duration-700"
                 style={{ opacity: loaded ? 1 : 0, background: "hsl(var(--surface-2))" }}

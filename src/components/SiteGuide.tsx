@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { MessageSquare, X, ArrowRight, Compass, CornerDownLeft } from "lucide-react";
 import { products } from "@/data/srai";
+import { openRoles } from "@/data/careers";
 import { CONTACT_EMAIL } from "@/lib/contact-form";
 import { track } from "@/lib/analytics";
 
@@ -88,6 +89,16 @@ const ANSWERS: Answer[] = [
     keys: ["where", "location", "based", "office", "city", "pune", "india"],
     a: "Pune, India. We build for Indian conditions specifically — regional languages, Indian regulation, mid-range Android phones and patchy connectivity are the baseline we design against, not an afterthought.",
     to: "/about", cta: "More about us",
+  },
+  {
+    id: "careers",
+    q: "Are you hiring?",
+    keys: ["hiring", "job", "career", "jobs", "role", "vacancy", "vacancies", "intern", "internship", "apply", "recruit", "position", "opening"],
+    a:
+      openRoles.length === 0
+        ? "Not for a named position right now — the careers page says so plainly rather than keeping an evergreen listing open. Open applications are still read, and you get a reply either way within a week. Send links to something you built rather than a CV."
+        : `Yes — ${openRoles.length} open ${openRoles.length === 1 ? "role" : "roles"} right now, listed in full on the careers page with responsibilities, requirements and pay. Hiring runs in five steps and step four is a small paid task from the real backlog, never unpaid work.`,
+    to: "/careers", cta: "See careers",
   },
   {
     id: "trust",

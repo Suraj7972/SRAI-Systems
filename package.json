@@ -5,12 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && vite build --ssr src/entry-server.tsx --outDir dist-ssr && node scripts/prerender.mjs",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "build:client": "vite build",
+    "verify": "node scripts/verify.mjs"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.11",
@@ -76,6 +78,7 @@
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^15.15.0",
     "jsdom": "^20.0.3",
+    "playwright": "^1.56.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.8.3",
@@ -83,5 +86,5 @@
     "vite": "^5.4.19",
     "vitest": "^3.2.4"
   },
-  "description": "Corporate website for SRAI Systems \u2014 AI product studio, Nagpur, India."
+  "description": "Corporate website for SRAI Systems — AI product studio, Pune, India."
 }
