@@ -23,4 +23,13 @@ export default tseslint.config(
       "@typescript-eslint/no-unused-vars": "off",
     },
   },
+  {
+    /**
+     * The server entry is never part of the browser HMR graph — it is built
+     * separately by `vite build --ssr` and imported by scripts/prerender.mjs —
+     * so the fast-refresh rule has nothing to say about it.
+     */
+    files: ["src/entry-server.tsx"],
+    rules: { "react-refresh/only-export-components": "off" },
+  },
 );
