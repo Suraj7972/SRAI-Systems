@@ -50,8 +50,14 @@ Or connect the GitHub repo at vercel.com/new and it redeploys on every push.
 > homepage sixteen times over. Combined with a hardcoded canonical of `/`, that
 > is precisely what de-indexed this site.
 >
-> `npm test` fails if a `rewrites` key returns to `vercel.json`. `npm run verify`
-> serves `dist/` with no catch-all, the way Vercel actually will.
+> `npm test` fails if a `rewrites` key returns to `vercel.json`, and
+> `scripts/verify.mjs` — which `npm run build` now runs as its final step —
+> serves `dist/` with no catch-all, the way Vercel actually will. A regression
+> fails the build, not just a report.
+>
+> The build's verification step needs no browser: the headless-Chromium half is
+> skipped with a notice on a build image that has none, while every SEO
+> assertion still runs and still gates the deploy.
 
 **Verify before you ship**, and again after:
 
@@ -145,9 +151,18 @@ docs/                     Contact-form and analytics setup notes
 - **Google Search Console is not verified.** The meta tag placeholder is in
   `index.html`; DNS TXT verification survives redeploys and is the better option.
   Until this is done, nobody can submit the sitemap or see what Google indexes.
-- **No team page.** There is no name, photo or bio anywhere on the site. For a
-  B2B buyer this is the single biggest remaining gap, and it costs one paragraph
-  and one photograph.
+- **No named founder.** `ORG.founder` in `src/data/org.ts` is `undefined`, so
+  the /about team section and the `Person` node in the JSON-LD both render
+  nothing. Both are already built. Setting `{ name, jobTitle, url? }` turns them
+  on — for a B2B buyer this is the single biggest remaining gap, and it costs one
+  paragraph and one photograph.
+- **No founding date.** `ORG.foundingDate` is `undefined` for the same reason.
+  An ISO date ("2024-01-15" or just "2024") completes the Organization entity.
+- **Seven products do not state where they run.** `runsOn` in `src/data/srai.ts`
+  is set only on FundOS, which has a public web URL. Everywhere else the "Where
+  it runs" row is omitted and `operatingSystem` is left out of the JSON-LD,
+  rather than asserting "Web" for a product that may be a mobile app. One word
+  per product fixes it.
 - **Six products have no real screenshots.** Their demos cover the mechanic;
   screenshots would show the actual product. Send 6–10 per product.
 - **Legal pages are unreviewed drafts.** `/privacy` and `/terms` carry a visible

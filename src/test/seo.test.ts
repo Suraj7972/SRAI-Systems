@@ -11,9 +11,11 @@ import {
   SITE_URL,
   type RouteDef,
 } from "@/routes";
-import { buildSitemap, buildRobots, jsonLdFor } from "@/lib/seo";
-import { ORG } from "@/data/org";
+import { buildSitemap, buildRobots, buildLlmsTxt, jsonLdFor } from "@/lib/seo";
+import { answerFor, faqsFor } from "@/lib/jsonld";
+import { ORG, prune } from "@/data/org";
 import { products } from "@/data/srai";
+import { pageAnswers, siteFaqs } from "@/data/answers";
 
 /**
  * These tests exist because of one specific failure: index.html hardcoded a
@@ -142,6 +144,38 @@ describe("robots.txt", () => {
     }
   });
 
+  it("names every answer-engine crawler the site wants to be cited by", () => {
+    for (const agent of [
+      "ChatGPT-User",
+      "Claude-User",
+      "Claude-SearchBot",
+      "Perplexity-User",
+      "Google-Extended",
+      "Applebot-Extended",
+      "Amazonbot",
+      "Meta-ExternalAgent",
+      "CCBot",
+    ]) {
+      expect(robots).toContain(`User-agent: ${agent}`);
+    }
+  });
+
+  it("allows everything it names", () => {
+    expect(robots).not.toContain("Disallow:");
+    expect(robots).toContain("User-agent: *\nAllow: /");
+  });
+
+  /**
+   * Recorded in the file so a future "let us opt out of AI training" pass
+   * cannot quietly cost the site its Gemini citations under the impression it
+   * is turning off AI Overviews. It cannot.
+   */
+  it("records what Google-Extended and Applebot-Extended actually govern", () => {
+    expect(robots).toContain("Google-Extended governs Gemini grounding");
+    expect(robots).toContain("AI Overviews follow Googlebot");
+    expect(robots).toContain("Applebot-Extended is likewise training-only");
+  });
+
   it("points at the sitemap", () => {
     expect(robots).toContain(`Sitemap: ${SITE_URL}/sitemap.xml`);
   });
@@ -170,7 +204,10 @@ describe("JSON-LD", () => {
 
   it("gives every route an Organization, WebSite, page node and breadcrumbs", () => {
     for (const route of routes) {
-      const types = graphFor(route).map((n) => n["@type"]);
+      // A page node may carry two types: a product page is WebPage AND FAQPage.
+      const types = graphFor(route).flatMap((n) =>
+        Array.isArray(n["@type"]) ? (n["@type"] as string[]) : [n["@type"] as string],
+      );
       expect(types, route.path).toContain("Organization");
       expect(types, route.path).toContain("WebSite");
       expect(types, route.path).toContain("BreadcrumbList");
@@ -180,7 +217,9 @@ describe("JSON-LD", () => {
 
   it("adds SoftwareApplication on product pages only", () => {
     for (const route of routes) {
-      const types = graphFor(route).map((n) => n["@type"]);
+      const types = graphFor(route).flatMap((n) =>
+        Array.isArray(n["@type"]) ? (n["@type"] as string[]) : [n["@type"] as string],
+      );
       expect(types.includes("SoftwareApplication"), route.path).toBe(Boolean(route.productId));
     }
   });
@@ -197,6 +236,250 @@ describe("JSON-LD", () => {
       const page = graphFor(route).find((n) => String(n["@id"]).endsWith("#webpage"))!;
       expect(page.url, route.path).toBe(absoluteUrl(route.path));
     }
+  });
+});
+
+/* ── Part 2 of the GEO work: the serializer must never assert emptiness ──── */
+
+describe("JSON-LD serializer", () => {
+  it("drops undefined values", () => {
+    expect(prune({ a: 1, b: undefined })).toEqual({ a: 1 });
+  });
+
+  it("drops empty arrays", () => {
+    expect(prune({ sameAs: [], name: "x" })).toEqual({ name: "x" });
+  });
+
+  it("drops empty strings and empty objects", () => {
+    expect(prune({ a: "", b: {}, c: "y" })).toEqual({ c: "y" });
+  });
+
+  it("drops a key whose object value pruned away entirely", () => {
+    expect(prune({ founder: { name: undefined }, ok: 1 })).toEqual({ ok: 1 });
+  });
+
+  it("keeps zero and false, which carry information", () => {
+    expect(prune({ n: 0, f: false })).toEqual({ n: 0, f: false });
+  });
+
+  it("returns undefined when the whole value pruned away", () => {
+    expect(prune({ a: undefined, b: [] })).toBeUndefined();
+  });
+
+  it("never emits null or undefined anywhere in a real page graph", () => {
+    for (const route of routes) {
+      const json = JSON.stringify(jsonLdFor(route));
+      expect(json, route.path).not.toMatch(/:\s*null/);
+      expect(json, route.path).not.toContain("undefined");
+      expect(json, route.path).not.toMatch(/"sameAs":\s*\[\]/);
+    }
+  });
+});
+
+describe("JSON-LD entity graph", () => {
+  const idsIn = (value: unknown, into = new Set<string>()): Set<string> => {
+    if (Array.isArray(value)) value.forEach((v) => idsIn(v, into));
+    else if (value && typeof value === "object") {
+      const node = value as Record<string, unknown>;
+      if (typeof node["@id"] === "string" && Object.keys(node).length > 1) {
+        into.add(node["@id"] as string);
+      }
+      Object.values(node).forEach((v) => idsIn(v, into));
+    }
+    return into;
+  };
+  const refsIn = (value: unknown, into: string[] = []): string[] => {
+    if (Array.isArray(value)) value.forEach((v) => refsIn(v, into));
+    else if (value && typeof value === "object") {
+      const node = value as Record<string, unknown>;
+      const keys = Object.keys(node);
+      if (keys.length === 1 && typeof node["@id"] === "string") into.push(node["@id"] as string);
+      else Object.values(node).forEach((v) => refsIn(v, into));
+    }
+    return into;
+  };
+
+  it("resolves every @id reference to an entity present in the same graph", () => {
+    for (const route of routes) {
+      const graph = jsonLdFor(route);
+      const defined = idsIn(graph);
+      const dangling = [...new Set(refsIn(graph))].filter((id) => !defined.has(id));
+      expect(dangling, `${route.path} references entities that are not in its graph`).toEqual([]);
+    }
+  });
+
+  it("anchors every page to the one Organization and WebSite", () => {
+    for (const route of routes) {
+      const nodes = jsonLdFor(route)["@graph"] as Record<string, unknown>[];
+      const org = nodes.find((n) => n["@type"] === "Organization")!;
+      const site = nodes.find((n) => n["@type"] === "WebSite")!;
+      expect(org["@id"], route.path).toBe(`${SITE_URL}/#organization`);
+      expect(site["@id"], route.path).toBe(`${SITE_URL}/#website`);
+    }
+  });
+
+  it("never emits a JobPosting while no role is open", () => {
+    for (const route of routes) {
+      expect(JSON.stringify(jsonLdFor(route)), route.path).not.toContain("JobPosting");
+    }
+  });
+
+  it("never emits a rating, a review or an offer", () => {
+    for (const route of routes) {
+      const json = JSON.stringify(jsonLdFor(route));
+      expect(json, route.path).not.toMatch(/aggregateRating|ratingValue|"review"|"offers"/i);
+    }
+  });
+
+  it("omits a founder Person entirely while ORG.founder is undefined", () => {
+    const nodes = jsonLdFor(routes[0])["@graph"] as Record<string, unknown>[];
+    const person = nodes.find((n) => n["@type"] === "Person");
+    if (ORG.founder === undefined) expect(person).toBeUndefined();
+    else expect(person).toBeDefined();
+  });
+
+  it("emits dateModified matching the route's own content date", () => {
+    for (const route of routes) {
+      const nodes = jsonLdFor(route)["@graph"] as Record<string, unknown>[];
+      const page = nodes.find((n) => String(n["@id"]).endsWith("#webpage"))!;
+      expect(page.dateModified, route.path).toBe(route.lastUpdated);
+    }
+  });
+});
+
+/* ── Part 3: the answer blocks ───────────────────────────────────────────── */
+
+describe("answer blocks", () => {
+  it("gives every route an answer block", () => {
+    for (const route of routes) {
+      expect(answerFor(route), `${route.path} has no answer block`).toBeDefined();
+    }
+  });
+
+  it("phrases every question as a question", () => {
+    for (const route of routes) {
+      expect(answerFor(route)!.question, route.path).toMatch(/\?$/);
+    }
+  });
+
+  it("keeps every answer between 40 and 70 words", () => {
+    for (const route of routes) {
+      const words = answerFor(route)!.body.trim().split(/\s+/).length;
+      expect(words, `${route.path}: ${words} words`).toBeGreaterThanOrEqual(40);
+      expect(words, `${route.path}: ${words} words`).toBeLessThanOrEqual(70);
+    }
+  });
+
+  /**
+   * The whole point of an answer block is that it survives being copy-pasted
+   * away from this site. An answer opening with "We" or "Our platform" cannot:
+   * the reader has no idea who "we" is.
+   */
+  it("opens every answer with a proper noun, never a pronoun", () => {
+    const PRONOUNS = ["We", "Our", "Ours", "Us", "It", "Its", "They", "Their", "I",
+      "This", "That", "These", "Those", "He", "She", "Here", "There"];
+    for (const route of routes) {
+      const [first, second] = answerFor(route)!.body.trim().split(/\s+/);
+      expect(
+        PRONOUNS.includes(first),
+        `${route.path} opens with "${first}" — an answer that needs context to parse`,
+      ).toBe(false);
+      // "The" is only acceptable as the article on a proper noun: "The SRAI
+      // Systems website ...", never "The platform ...".
+      if (first === "The") {
+        expect(
+          /^[A-Z]/.test(second ?? ""),
+          `${route.path} opens "The ${second}" — name the subject, do not gesture at it`,
+        ).toBe(true);
+      }
+    }
+  });
+
+  it("names a route for every page answer, and vice versa", () => {
+    for (const path of Object.keys(pageAnswers)) {
+      expect(routes.some((r) => r.path === path), `${path} is not a route`).toBe(true);
+    }
+  });
+});
+
+/* ── Part 2: FAQ markup must match the visible page ──────────────────────── */
+
+describe("FAQ content", () => {
+  it("gives every product 4 to 6 questions", () => {
+    for (const product of products) {
+      expect(product.faqs.length, `${product.id} has ${product.faqs.length} FAQs`).toBeGreaterThanOrEqual(4);
+      expect(product.faqs.length, `${product.id} has ${product.faqs.length} FAQs`).toBeLessThanOrEqual(6);
+    }
+  });
+
+  it("gives the site-level set to /about and to nothing else", () => {
+    const about = routes.find((r) => r.path === "/about")!;
+    expect(faqsFor(about)).toBe(siteFaqs);
+    expect(faqsFor(routes.find((r) => r.path === "/contact")!)).toEqual([]);
+  });
+
+  it("phrases every question as a question and answers each one", () => {
+    for (const route of routes) {
+      for (const faq of faqsFor(route)) {
+        expect(faq.q, `${route.path}: "${faq.q}"`).toMatch(/\?$/);
+        expect(faq.a.length, `${route.path}: "${faq.q}" has a stub answer`).toBeGreaterThan(40);
+      }
+    }
+  });
+
+  it("emits FAQPage only where questions are actually rendered", () => {
+    for (const route of routes) {
+      const nodes = jsonLdFor(route)["@graph"] as Record<string, unknown>[];
+      const page = nodes.find((n) => String(n["@id"]).endsWith("#webpage"))!;
+      const types = Array.isArray(page["@type"]) ? page["@type"] : [page["@type"]];
+      expect(types.includes("FAQPage"), route.path).toBe(faqsFor(route).length > 0);
+    }
+  });
+
+  it("puts the same words in mainEntity as the page will render", () => {
+    for (const route of routes) {
+      const faqs = faqsFor(route);
+      if (faqs.length === 0) continue;
+      const nodes = jsonLdFor(route)["@graph"] as Record<string, unknown>[];
+      const page = nodes.find((n) => String(n["@id"]).endsWith("#webpage"))!;
+      const entity = page.mainEntity as { name: string; acceptedAnswer: { text: string } }[];
+      expect(entity.map((q) => q.name), route.path).toEqual(faqs.map((f) => f.q));
+      expect(entity.map((q) => q.acceptedAnswer.text), route.path).toEqual(faqs.map((f) => f.a));
+    }
+  });
+});
+
+/* ── Part 6: freshness ───────────────────────────────────────────────────── */
+
+describe("lastUpdated", () => {
+  it("is an ISO date on every route", () => {
+    for (const route of routes) {
+      expect(route.lastUpdated, route.path).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    }
+  });
+
+  it("drives the sitemap's lastmod", () => {
+    const xml = buildSitemap();
+    for (const route of sitemapRoutes) {
+      expect(xml).toContain(`<lastmod>${route.lastUpdated}</lastmod>`);
+    }
+  });
+});
+
+/* ── Part 5: llms.txt. Generated, unadvertised, untuned. ─────────────────── */
+
+describe("llms.txt", () => {
+  const llms = buildLlmsTxt();
+
+  it("names the site and lists every indexable route", () => {
+    expect(llms.startsWith(`# ${ORG.name}`)).toBe(true);
+    for (const route of sitemapRoutes) {
+      expect(llms, `${route.path} missing from llms.txt`).toContain(absoluteUrl(route.path));
+    }
+  });
+
+  it("never advertises the 404 page", () => {
+    expect(llms).not.toContain(absoluteUrl(notFoundRoute.path));
   });
 });
 

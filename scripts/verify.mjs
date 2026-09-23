@@ -10,7 +10,15 @@
  * HTML is the homepage on all sixteen URLs. This server refuses to do that, so
  * if the prerender regresses, this script fails instead of the search index.
  *
- * Run after `npm run build`:  npm run verify
+ * WIRED INTO `npm run build`, so a regression fails the build rather than a
+ * report nobody reads. The HTML assertions need no browser and always run. The
+ * headless-Chromium pass runs when a browser is available and is SKIPPED, with
+ * a notice, when it is not — a CI or hosting build image without Chromium must
+ * not be able to turn a broken prerender into a green deploy, but it must also
+ * not fail a deploy for a reason that has nothing to do with the site. Pass
+ * --no-browser to skip it deliberately.
+ *
+ * Run on its own:  npm run verify
  */
 
 import { createServer } from "node:http";
@@ -18,7 +26,15 @@ import { readFile, stat } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { extname, join, normalize, resolve, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { chromium } from "playwright";
+
+/**
+ * Playwright is imported dynamically, not at the top of the file. This script
+ * gates `npm run build`, which also runs on the host's build image — where
+ * neither the package nor a browser binary is guaranteed. A missing browser
+ * must degrade to "skipped, and said so", never to a failed deploy and never to
+ * a module-resolution crash before a single SEO assertion has run.
+ */
+const SKIP_BROWSER = process.argv.includes("--no-browser");
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, "..");
@@ -118,7 +134,69 @@ console.log(dim(`\nserving dist/ at ${origin} (clean URLs, no catch-all)\n`));
 
 const between = (html, re) => (html.match(re) ?? [])[1];
 
-function visibleText(html) {
+/**
+ * index.html carries a long comment explaining why no canonical may be
+ * hardcoded there — including the literal text `<link rel="canonical">`. Every
+ * structural assertion runs against the document with comments removed, so the
+ * warning about the bug cannot be mistaken for the bug.
+ */
+const withoutComments = (html) => html.replace(/<!--[\s\S]*?-->/g, "");
+
+/** Every JSON-LD block on the page, parsed. Throws the raw text on a parse failure. */
+function jsonLdBlocks(html) {
+  const blocks = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)];
+  return blocks.map((m) => {
+    const raw = m[1].replace(/\\u003c/g, "<");
+    try {
+      return { ok: true, value: JSON.parse(raw) };
+    } catch (error) {
+      return { ok: false, error: String(error), raw: raw.slice(0, 120) };
+    }
+  });
+}
+
+/** Collect every @id defined anywhere in a graph, including nested nodes. */
+function collectIds(value, into = new Set()) {
+  if (Array.isArray(value)) {
+    for (const v of value) collectIds(v, into);
+  } else if (value && typeof value === "object") {
+    const keys = Object.keys(value);
+    // A node that is ONLY {"@id": ...} is a reference, not a definition.
+    if (typeof value["@id"] === "string" && keys.length > 1) into.add(value["@id"]);
+    for (const v of Object.values(value)) collectIds(v, into);
+  }
+  return into;
+}
+
+/** Every pure {"@id": ...} reference in a graph. */
+function collectRefs(value, into = []) {
+  if (Array.isArray(value)) {
+    for (const v of value) collectRefs(v, into);
+  } else if (value && typeof value === "object") {
+    const keys = Object.keys(value);
+    if (keys.length === 1 && typeof value["@id"] === "string") into.push(value["@id"]);
+    else for (const v of Object.values(value)) collectRefs(v, into);
+  }
+  return into;
+}
+
+/**
+ * React escapes apostrophes and quotes when it serialises text, so the rendered
+ * HTML says `farmer&#x27;s` where the page says `farmer's`. Comparing JSON-LD
+ * strings against page text without decoding first reports false mismatches on
+ * every sentence containing an apostrophe.
+ */
+const decode = (s = "") =>
+  s
+    .replace(/&#x27;|&#39;|&apos;/g, "'")
+    .replace(/&quot;|&#34;/g, '"')
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&#x2F;/g, "/")
+    .replace(/&amp;/g, "&");
+
+/** Body text of a served document, as a crawler would reduce it. */
+function bodyTextOf(html) {
   const body = html.split('<div id="root">')[1] ?? html;
   return body
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
@@ -129,13 +207,44 @@ function visibleText(html) {
     .trim();
 }
 
-const decode = (s = "") =>
-  s
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#x27;/g, "'");
+/**
+ * How far into the body text the first <h2> ending in "?" appears.
+ *
+ * The answer block is the single highest-leverage thing on these pages: a
+ * question a buyer would actually type, answered completely in the paragraph
+ * below it. Buried three screens down it stops being the passage an engine
+ * lifts, so its position is asserted, not just its existence.
+ */
+const ANSWER_WITHIN = 1500;
+function answerHeadingAt(html) {
+  const body = html.split('<div id="root">')[1] ?? html;
+  for (const m of body.matchAll(/<h2[^>]*>([\s\S]*?)<\/h2>/g)) {
+    const text = m[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    if (!text.endsWith("?")) continue;
+    const before = body
+      .slice(0, m.index)
+      .replace(/<script[\s\S]*?<\/script>/gi, " ")
+      .replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    return { text, at: before.length };
+  }
+  return null;
+}
+
+function visibleText(html) {
+  const body = html.split('<div id="root">')[1] ?? html;
+  return decode(
+    body
+      .replace(/<script[\s\S]*?<\/script>/gi, " ")
+      .replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&nbsp;/g, " ")
+      .replace(/\s+/g, " ")
+      .trim(),
+  );
+}
 
 const home = prerenderRoutes.find((r) => r.path === "/");
 const seenTitles = new Map();
@@ -146,13 +255,14 @@ console.log("HTTP (no browser — this is what a crawler receives)");
 for (const route of prerenderRoutes) {
   const res = await fetch(`${origin}${route.path}`, { redirect: "manual" });
   const html = await res.text();
+  const clean = withoutComments(html);
   const label = route.path;
 
   check(res.status === 200, `${label}: HTTP 200`, `got ${res.status}`);
 
   const title = decode(between(html, /<title>([\s\S]*?)<\/title>/));
   const description = decode(between(html, /<meta name="description" content="([\s\S]*?)">/));
-  const canonical = decode(between(html, /<link rel="canonical" href="([^"]*)"/));
+  const canonical = decode(between(clean, /<link rel="canonical" href="([^"]*)"/));
 
   check(title === route.title, `${label}: own <title>`, `got ${JSON.stringify(title)}`);
   check(
@@ -177,6 +287,11 @@ for (const route of prerenderRoutes) {
   check(prevD === undefined, `${label}: description is unique`, `also used by ${prevD}`);
   seenDescriptions.set(description, label);
 
+  // Exactly one canonical. Comments are stripped first: index.html's warning
+  // about hardcoded canonicals contains the literal tag text.
+  const canonicals = (clean.match(/<link rel="canonical"/g) ?? []).length;
+  check(canonicals === 1, `${label}: exactly one <link rel="canonical">`, `got ${canonicals}`);
+
   const text = visibleText(html);
   check(
     text.length > MIN_BODY_TEXT,
@@ -184,30 +299,80 @@ for (const route of prerenderRoutes) {
     `got ${text.length}`,
   );
 
-  const h1s = (html.match(/<h1[\s>]/g) ?? []).length;
+  const h1s = (clean.match(/<h1[\s>]/g) ?? []).length;
   check(h1s === 1, `${label}: exactly one <h1>`, `got ${h1s}`);
 
-  const ld = between(html, /<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
-  let graph = null;
-  try {
-    graph = JSON.parse(ld ?? "");
-  } catch {
-    /* handled below */
+  // The answer block, and how early it is.
+  const answer = answerHeadingAt(html);
+  check(answer !== null, `${label}: has an <h2> phrased as a question`);
+  if (answer) {
+    check(
+      answer.at < ANSWER_WITHIN,
+      `${label}: answer <h2> within the first ${ANSWER_WITHIN} chars of body text`,
+      `"${answer.text}" appears ${answer.at} chars in`,
+    );
   }
-  check(graph !== null, `${label}: valid JSON-LD`);
+
+  // Every JSON-LD block on the page must parse, not just the first.
+  const blocks = jsonLdBlocks(html);
+  check(blocks.length >= 1, `${label}: has JSON-LD`, `found ${blocks.length} blocks`);
+  for (const [i, b] of blocks.entries()) {
+    check(b.ok, `${label}: JSON-LD block ${i + 1} parses`, b.ok ? "" : `${b.error} — ${b.raw}`);
+  }
+
+  const graph = blocks.find((b) => b.ok)?.value ?? null;
   if (graph) {
-    check(Array.isArray(graph["@graph"]) && graph["@graph"].length >= 4, `${label}: JSON-LD @graph`);
-    const types = (graph["@graph"] ?? []).map((n) => n["@type"]);
+    const nodes = graph["@graph"] ?? [];
+    check(Array.isArray(nodes) && nodes.length >= 4, `${label}: JSON-LD @graph`);
+    // A node may carry several types (a product page is WebPage AND FAQPage).
+    const types = nodes.flatMap((n) => (Array.isArray(n["@type"]) ? n["@type"] : [n["@type"]]));
     check(types.includes("Organization"), `${label}: JSON-LD Organization`);
     check(types.includes("WebSite"), `${label}: JSON-LD WebSite`);
     check(types.includes("BreadcrumbList"), `${label}: JSON-LD BreadcrumbList`);
     check(types.includes(route.type), `${label}: JSON-LD ${route.type}`);
     if (route.productId) {
       check(types.includes("SoftwareApplication"), `${label}: JSON-LD SoftwareApplication`);
+      check(types.includes("FAQPage"), `${label}: JSON-LD FAQPage`);
     }
-    // Never claim traction the company does not have.
+    if (route.path === "/products") check(types.includes("ItemList"), `${label}: JSON-LD ItemList`);
+    if (route.path === "/services") check(types.includes("Service"), `${label}: JSON-LD Service`);
+
     const json = JSON.stringify(graph);
-    check(!/aggregateRating|"review"|"offers"/i.test(json), `${label}: no rating/review/offers markup`);
+
+    // Never claim traction, ratings or a vacancy the company does not have.
+    check(
+      !/aggregateRating|ratingValue|"review"|"offers"|JobPosting/i.test(json),
+      `${label}: no rating / review / offers / JobPosting markup`,
+    );
+
+    // The serializer must drop empty values rather than assert emptiness.
+    check(!/"sameAs":\s*\[\]/.test(json), `${label}: no empty sameAs array`);
+    check(!/:\s*(null|undefined)([,}\]])/.test(json), `${label}: no null or undefined values`);
+
+    // Every {"@id": x} reference must resolve to a node defined in this graph.
+    const defined = collectIds(graph);
+    const dangling = [...new Set(collectRefs(graph))].filter((id) => !defined.has(id));
+    check(dangling.length === 0, `${label}: every @id reference resolves`, dangling.join(", "));
+
+    // dateModified is the page's own content date, and it is on the page too.
+    const page = nodes.find((n) => String(n["@id"]).endsWith("#webpage"));
+    check(page?.dateModified === route.lastUpdated, `${label}: dateModified matches the route`);
+
+    // FAQ markup must match words that are visible on the page.
+    for (const node of nodes) {
+      for (const q of node.mainEntity ?? []) {
+        check(
+          text.includes(q.name),
+          `${label}: FAQ question is visible on the page`,
+          JSON.stringify(q.name),
+        );
+        check(
+          text.includes(q.acceptedAnswer?.text ?? ""),
+          `${label}: FAQ answer is visible on the page`,
+          JSON.stringify(String(q.acceptedAnswer?.text).slice(0, 50)),
+        );
+      }
+    }
   }
 
   console.log(`  ${green("✓")} ${label.padEnd(28)} ${dim(`${text.length} chars · ${title.length}-char title`)}`);
@@ -240,13 +405,49 @@ for (const route of prerenderRoutes) {
     check(robots.includes(`User-agent: ${agent}`), `robots.txt names ${agent}`);
   }
   check(robots.includes("Sitemap: https://sraisystems.in/sitemap.xml"), "robots.txt points at the sitemap");
-  console.log(`  ${green("✓")} ${"sitemap.xml + robots.txt".padEnd(28)} ${dim(`${prerenderRoutes.length} urls`)}`);
+
+  // llms.txt: checked for existence and shape only. See the comment on
+  // buildLlmsTxt() in src/lib/seo.ts for why nothing more is invested in it.
+  const llms = await (await fetch(`${origin}/llms.txt`)).text();
+  check(llms.startsWith("# SRAI Systems"), "llms.txt names the site");
+  for (const route of prerenderRoutes) {
+    check(llms.includes(absoluteUrl(route.path)), `llms.txt lists ${route.path}`);
+  }
+  console.log(
+    `  ${green("✓")} ${"sitemap + robots + llms.txt".padEnd(28)} ${dim(`${prerenderRoutes.length} urls`)}`,
+  );
 }
 
 /* ── Browser checks ───────────────────────────────────────────────────── */
 
-console.log("\nHeadless Chromium");
-const browser = await chromium.launch();
+/**
+ * The browser pass is best-effort by design. These assertions (console errors,
+ * hydration, horizontal overflow) need a real engine; the SEO assertions above
+ * do not, and those are the ones that must gate a deploy. A build image with no
+ * Chromium skips this and says so, loudly, rather than failing a deploy for a
+ * missing binary or quietly passing as though it had run.
+ */
+let browser = null;
+if (SKIP_BROWSER) {
+  console.log(dim("\nHeadless Chromium — skipped (--no-browser)"));
+} else {
+  try {
+    const { chromium } = await import("playwright");
+    browser = await chromium.launch();
+    console.log("\nHeadless Chromium");
+  } catch (error) {
+    console.log(
+      `\n${dim("Headless Chromium — SKIPPED, no browser available:")} ${
+        error instanceof Error ? error.message.split("\n")[0] : String(error)
+      }`,
+    );
+    console.log(
+      dim("  the HTML assertions above still ran; run `npm run verify` locally for the browser pass."),
+    );
+  }
+}
+
+if (browser) {
 
 for (const viewport of VIEWPORTS) {
   const context = await browser.newContext({
@@ -325,6 +526,8 @@ for (const viewport of VIEWPORTS) {
 }
 
 await browser.close();
+}
+
 server.close();
 
 /* ── Result ───────────────────────────────────────────────────────────── */
