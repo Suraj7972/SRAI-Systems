@@ -7,6 +7,10 @@ import ProductIcon from "@/components/ProductIcon";
 import StatusBadge from "@/components/StatusBadge";
 import { products } from "@/data/srai";
 import { openRoles, hiringProcess, workingHere, beingHonest, type Role } from "@/data/careers";
+import AnswerBlock from "@/components/AnswerBlock";
+import LastUpdated from "@/components/LastUpdated";
+import { answerForPath } from "@/data/answers";
+import { CONTENT_UPDATED } from "@/routes";
 import { CONTACT_EMAIL } from "@/lib/contact-form";
 import { track } from "@/lib/analytics";
 
@@ -158,6 +162,15 @@ const Careers = () => {
                 enforces. If you would rather ship one real thing than sit in the planning for four,
                 you will recognise this place.
               </p>
+
+              {/* The answer block sits here rather than below the hero: the
+                  eight-product aside to the right is long, and the answer has to
+                  stay near the top of the body text to be the thing a generative
+                  engine lifts. */}
+              <div className="mb-10">
+                <AnswerBlock answer={answerForPath("/careers")} />
+                <LastUpdated date={CONTENT_UPDATED} className="mt-5" />
+              </div>
 
               <dl className="flex flex-wrap gap-x-8 gap-y-4">
                 <div>

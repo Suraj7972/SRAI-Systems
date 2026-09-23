@@ -8,7 +8,11 @@ import StatusBadge, { statusHelp } from "@/components/StatusBadge";
 import ProductGlyph from "@/components/ProductGlyph";
 import FeatureWalkthrough from "@/components/FeatureWalkthrough";
 import { ProductDemo, hasDemo } from "@/components/demos";
-import { products, type Product } from "@/data/srai";
+import AnswerBlock from "@/components/AnswerBlock";
+import ProductFacts from "@/components/ProductFacts";
+import FaqSection from "@/components/FaqSection";
+import LastUpdated from "@/components/LastUpdated";
+import { products, services, type Product } from "@/data/srai";
 import NotFound from "./NotFound";
 import { track } from "@/lib/analytics";
 
@@ -18,6 +22,22 @@ const railLabels: Record<string, string[]> = {
     "Grant eligibility", "Scheme catalogue", "Investor readiness", "ODI / FEMA",
     "Investor directory", "Pipeline", "Data room", "Overview",
   ],
+};
+
+/**
+ * The service each product demonstrates, so a product page links into the
+ * services page in prose rather than through navigation chrome.
+ *
+ * Three of these are stated outright in the service's own `proof` field in
+ * src/data/srai.ts: AI Product Engineering cites FundOS, Computer Vision & NLP
+ * cites SmartBhoomi, AI Automation cites ModGuardian. The rest fall back to AI
+ * Product Engineering, which is literally what building each of them was —
+ * end-to-end product development. No new claim is made either way.
+ */
+const SERVICE_FOR_PRODUCT: Record<string, string> = {
+  fundos: "ai-product-engineering",
+  smartbhoomi: "cv-nlp",
+  modguardian: "ai-automation",
 };
 
 const ctaFor = (p: Product) => {
@@ -50,6 +70,9 @@ const ProductDetail = () => {
   const cta = ctaFor(product);
   const accent = `hsl(${product.accentHsl})`;
   const related = products.filter((p) => product.related.includes(p.id));
+  const serviceForProduct = services.find(
+    (s) => s.id === (SERVICE_FOR_PRODUCT[product.id] ?? "ai-product-engineering"),
+  );
 
   return (
     <Layout>
@@ -115,6 +138,23 @@ const ProductDetail = () => {
             </div>
             </div>
           </SectionReveal>
+        </div>
+      </section>
+
+      {/* ── The answer: what this is, in one liftable paragraph ── */}
+      <section className="pb-14 border-t border-[hsl(var(--line-soft))] pt-12">
+        <div className="container mx-auto px-4 md:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-10 lg:gap-16">
+            <div>
+              <AnswerBlock answer={product.answer} accent={accent} />
+              <LastUpdated date={product.lastUpdated} className="mt-6" />
+            </div>
+            <SectionReveal delay={0.06}>
+              <div className="panel p-6 md:p-7 h-full">
+                <ProductFacts product={product} accent={accent} />
+              </div>
+            </SectionReveal>
+          </div>
         </div>
       </section>
 
@@ -294,12 +334,42 @@ const ProductDetail = () => {
         </div>
       </section>
 
+      {/* ── FAQ: same array as the FAQPage JSON-LD ── */}
+      <FaqSection
+        faqs={product.faqs}
+        heading={`${product.name}: questions people ask`}
+        accent={accent}
+      />
+
       {/* ── Related + CTA ── */}
       <section className="py-16 border-t border-border/60">
         <div className="container mx-auto px-4 md:px-8">
           {related.length > 0 && (
             <SectionReveal>
-              <h2 className="text-sm font-mono uppercase tracking-[0.2em] text-muted-foreground mb-6">Related products</h2>
+              <h2 className="text-2xl font-bold text-foreground mb-4">
+                What else {product.name} works alongside
+              </h2>
+              <p className="text-[15px] text-muted-foreground leading-relaxed max-w-3xl mb-8">
+                {product.name} sits beside{" "}
+                {related.map((r, i) => (
+                  <span key={r.id}>
+                    {i > 0 && (i === related.length - 1 ? " and " : ", ")}
+                    <Link to={`/products/${r.id}`}
+                      className="text-primary hover:underline rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60">
+                      {r.name}
+                    </Link>
+                    {" — "}
+                    {r.tagline.charAt(0).toLowerCase() + r.tagline.slice(1)}
+                  </span>
+                ))}
+                . All of them were built in-house by the same team, and the engineering behind{" "}
+                {product.name} is also available as{" "}
+                <Link to="/services"
+                  className="text-primary hover:underline rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60">
+                  {serviceForProduct?.title ?? "an AI engineering engagement"}
+                </Link>
+                {serviceForProduct ? ` — ${serviceForProduct.who.replace(/\.$/, "")}.` : "."}
+              </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-14 max-w-3xl">
                 {related.map((r) => (
                   <Link key={r.id} to={`/products/${r.id}`}

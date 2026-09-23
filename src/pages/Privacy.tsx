@@ -1,4 +1,6 @@
 import LegalPage, { type LegalSection } from "@/components/LegalPage";
+import { answerForPath } from "@/data/answers";
+import { LEGAL_UPDATED } from "@/routes";
 import { analyticsProvider } from "@/lib/analytics";
 
 /**
@@ -185,7 +187,8 @@ const Privacy = () => (
   <LegalPage
     title="Privacy Policy"
     documentTitle="Privacy Policy | SRAI Systems"
-    lastUpdated="25 August 2026"
+    lastUpdated={LEGAL_UPDATED}
+    answer={answerForPath("/privacy")}
     intro="What this website collects, why, and what you can ask us to do about it. Written in plain language on purpose."
     sections={sections}
   />

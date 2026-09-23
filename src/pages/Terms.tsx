@@ -1,4 +1,6 @@
 import LegalPage, { type LegalSection } from "@/components/LegalPage";
+import { answerForPath } from "@/data/answers";
+import { LEGAL_UPDATED } from "@/routes";
 
 /**
  * Placeholder terms of service for the marketing website only.
@@ -169,7 +171,8 @@ const Terms = () => (
   <LegalPage
     title="Terms of Service"
     documentTitle="Terms of Service | SRAI Systems"
-    lastUpdated="25 August 2026"
+    lastUpdated={LEGAL_UPDATED}
+    answer={answerForPath("/terms")}
     intro="The terms that apply to this website. Our products are covered by their own agreements."
     sections={sections}
   />

@@ -5,7 +5,13 @@ import Layout from "@/components/Layout";
 import SectionReveal from "@/components/SectionReveal";
 import ProductIcon from "@/components/ProductIcon";
 import StatusBadge from "@/components/StatusBadge";
+import AnswerBlock from "@/components/AnswerBlock";
+import FaqSection from "@/components/FaqSection";
+import LastUpdated from "@/components/LastUpdated";
 import { roadmap, principles, products } from "@/data/srai";
+import { answerForPath, siteFaqs } from "@/data/answers";
+import { CONTENT_UPDATED } from "@/routes";
+import { ORG } from "@/data/org";
 
 const statusStyle = (status: string) =>
   status === "completed"
@@ -52,6 +58,14 @@ const About = () => {
               <span className="inline-flex items-center gap-2"><Boxes className="w-4 h-4 text-primary" aria-hidden="true" /> {products.length} products built</span>
             </div>
           </SectionReveal>
+        </div>
+      </section>
+
+      {/* ── The answer: who this company is, in one liftable paragraph ── */}
+      <section className="py-14 border-t border-[hsl(var(--line-soft))]">
+        <div className="container mx-auto px-4 md:px-8">
+          <AnswerBlock answer={answerForPath("/about")} />
+          <LastUpdated date={CONTENT_UPDATED} className="mt-6" />
         </div>
       </section>
 
@@ -173,6 +187,37 @@ const About = () => {
           </ol>
         </div>
       </section>
+
+      {/* ── Team ──
+          Renders ONLY when ORG.founder is defined in src/data/org.ts. While it
+          is undefined this outputs nothing at all: no placeholder card, no
+          silhouette, no "team page coming soon". A named person is the single
+          strongest E-E-A-T signal a young studio has, and an invented one is a
+          fabricated entity — so the machinery ships and waits for a real name.
+          The matching Person node in the JSON-LD @graph is gated on the same
+          field, so the two can never disagree. ── */}
+      {ORG.founder && (
+        <section className="py-16 border-t border-[hsl(var(--line-soft))]">
+          <div className="container mx-auto px-4 md:px-8">
+            <SectionReveal>
+              <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-8">Who runs SRAI Systems</h2>
+              <div className="card-tier p-7 max-w-2xl">
+                <h3 className="text-lg font-semibold text-foreground">{ORG.founder.name}</h3>
+                <p className="text-sm text-muted-foreground mt-1">{ORG.founder.jobTitle}</p>
+                {ORG.founder.url && (
+                  <a href={ORG.founder.url} target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline mt-4 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60">
+                    Profile <ArrowUpRight className="w-3.5 h-3.5" aria-hidden="true" />
+                  </a>
+                )}
+              </div>
+            </SectionReveal>
+          </div>
+        </section>
+      )}
+
+      {/* ── Site FAQ: the same array the FAQPage JSON-LD is built from ── */}
+      <FaqSection faqs={siteFaqs} heading="Questions people ask about SRAI Systems" />
 
       {/* ── The honest bit ── */}
       <section className="py-16 border-t border-[hsl(var(--line-soft))]">
