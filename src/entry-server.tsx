@@ -79,4 +79,6 @@ export {
   descriptionTag,
   buildSitemap,
   buildRobots,
+  buildLlmsTxt,
 } from "@/lib/seo";
+export { jsonLdFor, answerFor, faqsFor } from "@/lib/jsonld";

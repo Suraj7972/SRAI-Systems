@@ -1,5 +1,4 @@
-import { ORG, SITE_URL, organizationNode } from "@/data/org";
-import { products } from "@/data/srai";
+import { ORG, SITE_URL } from "@/data/org";
 import {
   absoluteUrl,
   notFoundRoute,
@@ -7,6 +6,7 @@ import {
   sitemapRoutes,
   type RouteDef,
 } from "@/routes";
+import { jsonLdScript } from "@/lib/jsonld";
 
 /**
  * SRAI Systems — SEO output, generated from the route table.
@@ -15,10 +15,7 @@ import {
  * DOM and no build-tool dependency, so scripts/prerender.mjs and
  * src/test/seo.test.ts assert on exactly the same strings that ship.
  *
- * Emitted structured data is deliberately narrow: Organization, WebSite,
- * WebPage, BreadcrumbList and SoftwareApplication. No AggregateRating, no
- * Review, no offers — there is no traction to claim and inventing it would be
- * both a lie and a manual action waiting to happen.
+ * The JSON-LD itself lives in src/lib/jsonld.ts.
  */
 
 /** Social preview image. A real FundOS capture committed to this repo. */
@@ -30,82 +27,6 @@ const esc = (s: string) =>
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
-
-/* ── JSON-LD ──────────────────────────────────────────────────────────── */
-
-const websiteNode = () => ({
-  "@type": "WebSite",
-  "@id": `${SITE_URL}/#website`,
-  url: `${SITE_URL}/`,
-  name: ORG.name,
-  description: ORG.description,
-  publisher: { "@id": `${SITE_URL}/#organization` },
-  inLanguage: "en-IN",
-});
-
-const breadcrumbNode = (route: RouteDef) => ({
-  "@type": "BreadcrumbList",
-  "@id": `${absoluteUrl(route.path)}#breadcrumb`,
-  itemListElement: route.breadcrumbs.map((c, i) => ({
-    "@type": "ListItem",
-    position: i + 1,
-    name: c.name,
-    item: absoluteUrl(c.path),
-  })),
-});
-
-const pageNode = (route: RouteDef) => ({
-  "@type": route.type,
-  "@id": `${absoluteUrl(route.path)}#webpage`,
-  url: absoluteUrl(route.path),
-  name: route.title,
-  description: route.description,
-  isPartOf: { "@id": `${SITE_URL}/#website` },
-  about: { "@id": `${SITE_URL}/#organization` },
-  breadcrumb: { "@id": `${absoluteUrl(route.path)}#breadcrumb` },
-  inLanguage: "en-IN",
-});
-
-/**
- * SoftwareApplication for a product page.
- *
- * No `offers`, no `aggregateRating`, no `review`. `applicationCategory` is
- * BusinessApplication for every product here, which is accurate for all eight.
- */
-const softwareNode = (route: RouteDef) => {
-  const p = products.find((x) => x.id === route.productId);
-  if (!p) return null;
-  return {
-    "@type": "SoftwareApplication",
-    "@id": `${absoluteUrl(route.path)}#software`,
-    name: p.name,
-    description: p.oneLiner,
-    url: absoluteUrl(route.path),
-    applicationCategory: "BusinessApplication",
-    operatingSystem: "Web",
-    publisher: { "@id": `${SITE_URL}/#organization` },
-    ...(p.url ? { sameAs: [p.url] } : {}),
-  };
-};
-
-/** The full @graph for one route. */
-export function jsonLdFor(route: RouteDef): Record<string, unknown> {
-  const graph: Record<string, unknown>[] = [
-    organizationNode(),
-    websiteNode(),
-    pageNode(route),
-    breadcrumbNode(route),
-  ];
-  const software = softwareNode(route);
-  if (software) graph.push(software);
-  return { "@context": "https://schema.org", "@graph": graph };
-}
-
-/** `</script>` inside JSON would close the tag early. Nothing else needs escaping. */
-export function jsonLdScript(route: RouteDef): string {
-  const json = JSON.stringify(jsonLdFor(route)).replace(/</g, "\\u003c");
-  return `<script type="application/ld+json">${json}</script>`;
-}
 
 /* ── <head> ───────────────────────────────────────────────────────────── */
 
@@ -128,6 +49,8 @@ export function headTagsFor(route: RouteDef): string {
     `<meta name="twitter:title" content="${esc(route.title)}" />`,
     `<meta name="twitter:description" content="${esc(route.description)}" />`,
     `<meta name="twitter:image" content="${esc(OG_IMAGE)}" />`,
+    // Freshness, machine-readable. The same date is rendered visibly on the page.
+    `<meta property="article:modified_time" content="${esc(route.lastUpdated)}" />`,
   ];
   // The 404 page must never be indexed, and must never be advertised as canonical.
   if (!route.inSitemap) {
@@ -146,16 +69,17 @@ export const descriptionTag = (route: RouteDef) =>
 
 /**
  * Generated at build time from the route table, so it cannot drift from what
- * the prerenderer actually emits. `lastmod` is the build date: every page is
- * rebuilt on every deploy, so that is the truthful answer.
+ * the prerenderer actually emits. `lastmod` is each route's own content date,
+ * not the build date: telling a crawler that sixteen pages changed because a
+ * CSS file was rebuilt is how a sitemap's lastmod stops being believed.
  */
-export function buildSitemap(lastmod: string): string {
+export function buildSitemap(_buildDate?: string): string {
   const urls = sitemapRoutes
     .map(
       (r) =>
         `  <url>\n` +
         `    <loc>${esc(absoluteUrl(r.path))}</loc>\n` +
-        `    <lastmod>${lastmod}</lastmod>\n` +
+        `    <lastmod>${esc(r.lastUpdated)}</lastmod>\n` +
         `    <changefreq>${r.changefreq}</changefreq>\n` +
         `    <priority>${r.priority.toFixed(1)}</priority>\n` +
         `  </url>`,
@@ -169,43 +93,96 @@ export function buildSitemap(lastmod: string): string {
 
 /* ── robots.txt ───────────────────────────────────────────────────────── */
 
+/** Search and social crawlers. These decide whether the site appears at all. */
+const SEARCH_AGENTS = [
+  "Googlebot",
+  "Googlebot-Image",
+  "Bingbot",
+  "DuckDuckBot",
+  "Twitterbot",
+  "facebookexternalhit",
+  "LinkedInBot",
+  "Applebot",
+];
+
 /**
- * Search crawlers plus the answer-engine crawlers, named explicitly.
+ * Answer-engine and AI crawlers, named explicitly.
  *
- * Naming GPTBot, OAI-SearchBot, ClaudeBot and PerplexityBot is not decoration:
- * an unnamed agent falls through to `User-agent: *`, and an explicit Allow is
- * the only unambiguous signal that this site wants to be cited by them.
+ * An unnamed agent falls through to `User-agent: *`, which would already allow
+ * it. Naming each one anyway is not decoration: it is the only unambiguous
+ * signal that this site wants to be read and cited by that specific agent, and
+ * it means a future `Disallow` can be aimed at one crawler without touching the
+ * rest.
  */
+const AI_AGENTS = [
+  "GPTBot",
+  "OAI-SearchBot",
+  "ChatGPT-User",
+  "ClaudeBot",
+  "Claude-User",
+  "Claude-SearchBot",
+  "PerplexityBot",
+  "Perplexity-User",
+  "Google-Extended",
+  "Applebot-Extended",
+  "Amazonbot",
+  "Meta-ExternalAgent",
+  "CCBot",
+];
+
 export function buildRobots(): string {
-  const agents = [
-    "Googlebot",
-    "Googlebot-Image",
-    "Bingbot",
-    "DuckDuckBot",
-    "Twitterbot",
-    "facebookexternalhit",
-    "LinkedInBot",
-    // Answer engines / AI crawlers.
-    "GPTBot",
-    "OAI-SearchBot",
-    "ChatGPT-User",
-    "ClaudeBot",
-    "Claude-User",
-    "PerplexityBot",
-    "Perplexity-User",
-    "Google-Extended",
-    "Applebot",
-    "Applebot-Extended",
-  ];
-  const blocks = agents.map((a) => `User-agent: ${a}\nAllow: /`).join("\n\n");
+  const block = (a: string) => `User-agent: ${a}\nAllow: /`;
   return (
-    `# Generated by scripts/prerender.mjs from src/routes.tsx — do not edit by hand.\n` +
-    `${blocks}\n\n` +
+    `# Generated by scripts/prerender.mjs from src/lib/seo.ts — do not edit by hand.\n` +
+    `#\n` +
+    `# Two facts about the tokens below, recorded so nobody "optimizes" them later:\n` +
+    `#\n` +
+    `#   Google-Extended governs Gemini grounding and model training. It does NOT\n` +
+    `#   govern AI Overviews. AI Overviews follow Googlebot, and there is no way to\n` +
+    `#   opt out of them separately while remaining in Google Search at all.\n` +
+    `#   Disallowing Google-Extended therefore costs citations in Gemini and buys\n` +
+    `#   nothing in Search.\n` +
+    `#\n` +
+    `#   Applebot-Extended is likewise training-only. Apple's search and Siri\n` +
+    `#   crawling follow Applebot, which is a separate token listed below.\n` +
+    `#\n` +
+    `# Search and social crawlers\n` +
+    SEARCH_AGENTS.map(block).join("\n\n") +
+    `\n\n# Answer engines and AI crawlers\n` +
+    AI_AGENTS.map(block).join("\n\n") +
+    `\n\n# Everything else\n` +
     `User-agent: *\nAllow: /\n\n` +
     `Sitemap: ${SITE_URL}/sitemap.xml\n`
+  );
+}
+
+/* ── llms.txt ─────────────────────────────────────────────────────────── */
+
+/**
+ * READ THIS BEFORE SPENDING ANY TIME ON THIS FILE.
+ *
+ * No major AI provider has publicly committed to reading llms.txt. Google has
+ * advised against relying on it, and there is no credible evidence of crawlers
+ * fetching it in the wild. It is generated here for exactly one reason: the
+ * sitemap generator already walks the route table, so this costs nothing to
+ * emit and nothing to maintain.
+ *
+ * Accordingly: it is not linked from navigation, it is not tuned, and it is not
+ * reported as a feature of this site. If it ever starts mattering, it is already
+ * correct. If it never does, nobody lost an afternoon to it.
+ */
+export function buildLlmsTxt(): string {
+  const lines = sitemapRoutes.map(
+    (r) => `- [${r.title}](${absoluteUrl(r.path)}): ${r.description}`,
+  );
+  return (
+    `# ${ORG.name}\n\n` +
+    `> ${ORG.description}\n\n` +
+    `${lines.join("\n")}\n`
   );
 }
 
 /** Exported for the test suite. */
 export const allRoutes = routes;
 export const notFound = notFoundRoute;
+export { jsonLdFor, jsonLdScript, answerFor, faqsFor } from "@/lib/jsonld";

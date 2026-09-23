@@ -54,9 +54,30 @@ export interface RouteDef {
   breadcrumbs: Crumb[];
   /** false for the 404 page, which must never be advertised. */
   inSitemap: boolean;
+  /**
+   * ISO date this page's content was last edited. Rendered visibly as
+   * "Last updated <date>" and emitted as `dateModified` in the JSON-LD.
+   * Freshness is a real ranking and citation input, and a visible date is a
+   * trust signal to a human buyer too — so bump it when you edit the page.
+   */
+  lastUpdated: string;
   changefreq: "weekly" | "monthly" | "yearly";
   priority: number;
 }
+
+/**
+ * Content edit date for the pages whose copy lives in the components rather
+ * than in src/data. Bump it when you change what one of them says.
+ */
+export const CONTENT_UPDATED = "2026-09-23";
+
+/**
+ * The legal documents carry their own date: the day the policy text was last
+ * changed, which is what /privacy and /terms display and therefore what their
+ * `dateModified` must say. Structured data and visible text agree by using one
+ * constant for both.
+ */
+export const LEGAL_UPDATED = "2026-08-25";
 
 const HOME: Crumb = { name: "Home", path: "/" };
 const PRODUCTS: Crumb = { name: "Products", path: "/products" };
@@ -88,6 +109,7 @@ const marketingRoutes: RouteDef[] = [
     type: "WebPage",
     breadcrumbs: [HOME],
     inSitemap: true,
+    lastUpdated: CONTENT_UPDATED,
     changefreq: "weekly",
     priority: 1.0,
   },
@@ -100,6 +122,7 @@ const marketingRoutes: RouteDef[] = [
     type: "CollectionPage",
     breadcrumbs: [HOME, PRODUCTS],
     inSitemap: true,
+    lastUpdated: CONTENT_UPDATED,
     changefreq: "weekly",
     priority: 0.9,
   },
@@ -112,6 +135,7 @@ const marketingRoutes: RouteDef[] = [
     type: "CollectionPage",
     breadcrumbs: [HOME, { name: "Services", path: "/services" }],
     inSitemap: true,
+    lastUpdated: CONTENT_UPDATED,
     changefreq: "monthly",
     priority: 0.9,
   },
@@ -124,6 +148,7 @@ const marketingRoutes: RouteDef[] = [
     type: "AboutPage",
     breadcrumbs: [HOME, { name: "About", path: "/about" }],
     inSitemap: true,
+    lastUpdated: CONTENT_UPDATED,
     changefreq: "monthly",
     priority: 0.6,
   },
@@ -136,6 +161,7 @@ const marketingRoutes: RouteDef[] = [
     type: "WebPage",
     breadcrumbs: [HOME, { name: "Partnerships", path: "/partnerships" }],
     inSitemap: true,
+    lastUpdated: CONTENT_UPDATED,
     changefreq: "monthly",
     priority: 0.6,
   },
@@ -148,6 +174,7 @@ const marketingRoutes: RouteDef[] = [
     type: "WebPage",
     breadcrumbs: [HOME, { name: "Careers", path: "/careers" }],
     inSitemap: true,
+    lastUpdated: CONTENT_UPDATED,
     changefreq: "weekly",
     priority: 0.7,
   },
@@ -160,6 +187,7 @@ const marketingRoutes: RouteDef[] = [
     type: "ContactPage",
     breadcrumbs: [HOME, { name: "Contact", path: "/contact" }],
     inSitemap: true,
+    lastUpdated: CONTENT_UPDATED,
     changefreq: "monthly",
     priority: 0.8,
   },
@@ -172,6 +200,7 @@ const marketingRoutes: RouteDef[] = [
     type: "WebPage",
     breadcrumbs: [HOME, { name: "Privacy", path: "/privacy" }],
     inSitemap: true,
+    lastUpdated: LEGAL_UPDATED,
     changefreq: "yearly",
     priority: 0.2,
   },
@@ -184,6 +213,7 @@ const marketingRoutes: RouteDef[] = [
     type: "WebPage",
     breadcrumbs: [HOME, { name: "Terms", path: "/terms" }],
     inSitemap: true,
+    lastUpdated: LEGAL_UPDATED,
     changefreq: "yearly",
     priority: 0.2,
   },
@@ -199,6 +229,7 @@ const productDetailRoutes: RouteDef[] = products.map((p) => ({
   productId: p.id,
   breadcrumbs: [HOME, PRODUCTS, { name: p.name, path: `/products/${p.id}` }],
   inSitemap: true,
+  lastUpdated: p.lastUpdated,
   changefreq: "monthly" as const,
   priority: 0.8,
 }));
@@ -216,6 +247,7 @@ export const notFoundRoute: RouteDef = {
   type: "WebPage",
   breadcrumbs: [HOME],
   inSitemap: false,
+  lastUpdated: CONTENT_UPDATED,
   changefreq: "yearly",
   priority: 0.0,
 };

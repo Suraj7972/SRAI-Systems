@@ -1,3 +1,5 @@
+import type { Answer } from "./answers";
+
 /** Honest deployment/build state. Never a free string — the union is the point. */
 export type ProductStatus =
   | "LIVE"
@@ -53,6 +55,34 @@ export interface Product {
   /** Slugs of related products. */
   related: string[];
   seo: { title: string; description: string };
+  /**
+   * The lede on the product page: an <h2> phrased as the question a buyer types,
+   * and a 40-70 word paragraph answering it completely and standalone. Written
+   * so it survives being copy-pasted away from this site — see src/data/answers.ts.
+   */
+  answer: Answer;
+  /**
+   * 4-6 questions and answers, rendered visibly on the product page AND emitted
+   * as FAQPage JSON-LD from this same array, so the markup and the visible text
+   * are the same words by construction. Every answer must be true of the product
+   * as it exists today.
+   */
+  faqs: { q: string; a: string }[];
+  /**
+   * What a customer stops doing once this product is in place. Written only from
+   * what `problem` and `differentiator` already state. Absent where the repo does
+   * not say — the facts row is then omitted rather than filled with a guess.
+   */
+  replaces?: string;
+  /**
+   * Where the product actually runs. Set ONLY where the repo establishes it (a
+   * public web URL). Absent everywhere else, and the SoftwareApplication's
+   * `operatingSystem` is omitted in lockstep, because structured data must not
+   * claim what the visible page does not.
+   */
+  runsOn?: string;
+  /** ISO date this product's content was last edited. Bump it when you edit above. */
+  lastUpdated: string;
 }
 
 export interface Service {
@@ -221,6 +251,47 @@ export const products: Product[] = [
     url: "https://structera.sraisystems.in",
     icon: "Rocket",
     related: ["thecrows", "modguardian"],
+    answer: {
+      question: "What is FundOS?",
+      body:
+        "FundOS is a funding and compliance workspace for Indian startup founders, built by SRAI Systems in Pune. It maintains a catalogue of government schemes with per-company eligibility verdicts, scores investor readiness across six weighted categories, and tracks RBI ODI and FEMA filing deadlines. FundOS is publicly live and free to start at structera.sraisystems.in.",
+    },
+    faqs: [
+      {
+        q: "Which government schemes does FundOS cover?",
+        a:
+          "FundOS maintains a catalogue of Indian government schemes across registration, funding and incubation, each carrying its issuing authority, its ceiling and an eligibility verdict for your company. The catalogue is filterable and saveable, and separates what you likely qualify for from what you probably do not.",
+      },
+      {
+        q: "Does FundOS help with RBI ODI and FEMA compliance?",
+        a:
+          "Yes. FundOS includes a twelve-item RBI checklist for founders taking foreign capital — FC-GPR filing, FLA return, share allotment, valuation certificate, board resolution and more — with a phase indicator and upcoming-deadline warnings. It is guidance, explicitly not legal advice.",
+      },
+      {
+        q: "How does FundOS score investor readiness?",
+        a:
+          "FundOS scores fundraising readiness across six weighted categories: Team, Legal and Compliance, Market and Pitch, Product, Traction and Financials. The result is a ranked list of blockers and an exportable report, so gaps can be closed before an investor meeting rather than discovered during one.",
+      },
+      {
+        q: "What else does FundOS include?",
+        a:
+          "FundOS carries a directory of Indian VCs and angels filterable by stage, sector and cheque size, a six-stage investor pipeline with follow-up dates, copy-ready outreach templates, an investor-ready data room with view tracking, and an AI copilot with six task-specific modes that answers against your own company profile.",
+      },
+      {
+        q: "Who is FundOS for?",
+        a:
+          "FundOS is built for Indian founders raising capital or applying for government schemes, and for the people around them who have to produce the documents an investor asks for.",
+      },
+      {
+        q: "Can I use FundOS today?",
+        a:
+          "Yes. FundOS is publicly live, self-serve and free to start at structera.sraisystems.in, so it can be opened and used without a sales call.",
+      },
+    ],
+    replaces:
+      "Scheme research done by hand, investor readiness judged by feel, and RBI deadlines tracked from memory or a spreadsheet.",
+    runsOn: "Web browser, at structera.sraisystems.in",
+    lastUpdated: "2026-09-23",
     seo: {
       title: "FundOS — Government scheme eligibility and RBI compliance for Indian founders",
       description:
@@ -266,6 +337,41 @@ export const products: Product[] = [
     url: null,
     icon: "Sprout",
     related: ["sraiauctions", "foodieflow"],
+    answer: {
+      question: "What is SmartBhoomi?",
+      body:
+        "SmartBhoomi is a farm management app for Indian farmers, built by SRAI Systems in Marathi and regional languages rather than translated into them. It records expenses and sales, holds the daily task list, answers crop questions, checks seed quality, and shows weather, mandi prices and government schemes. SmartBhoomi is built and complete, not yet publicly deployed.",
+    },
+    faqs: [
+      {
+        q: "What language is SmartBhoomi in?",
+        a:
+          "SmartBhoomi is written in Marathi and regional languages first, not translated into them afterwards. That is the difference between an app a farmer can use directly and one a farmer's son has to operate for them.",
+      },
+      {
+        q: "What can a farmer do in SmartBhoomi?",
+        a:
+          "SmartBhoomi records expenses and sales, manages daily tasks and work logs, answers crop questions through AI advisory, scans seeds for quality, gives fertilizer and pesticide guidance, shows weather forecasts and mandi prices, summarises profit and loss, and surfaces government schemes with eligibility.",
+      },
+      {
+        q: "Can SmartBhoomi tell a farmer whether a season was profitable?",
+        a:
+          "Yes. SmartBhoomi records costs and sales as they happen and summarises them in a profit and loss dashboard, so the figure at the end of a season is a number rather than a guess.",
+      },
+      {
+        q: "Who is SmartBhoomi for?",
+        a:
+          "SmartBhoomi is built for smallholder and mid-size farmers, for agri-businesses and input dealers, and for farmer producer organisations in India.",
+      },
+      {
+        q: "Can I use SmartBhoomi today?",
+        a:
+          "Not yet. SmartBhoomi is built and complete but has not been publicly deployed, so access today is through a walkthrough arranged with SRAI Systems.",
+      },
+    ],
+    replaces:
+      "A paper notebook, a WhatsApp group and a neighbour's memory as the record of what a farm spent and earned.",
+    lastUpdated: "2026-09-23",
     seo: {
       title: "SmartBhoomi — AI farm management for Indian farmers",
       description:
@@ -306,6 +412,41 @@ export const products: Product[] = [
     url: null,
     icon: "Building2",
     related: ["foodieflow", "fundos"],
+    answer: {
+      question: "What is Hotel Management AI?",
+      body:
+        "Hotel Management AI is an operations system for Indian hotels and restaurants, built by SRAI Systems. It covers menu and table management, warehouse and inventory tracking, billing, employee salary and advance tracking, and profit-and-loss analysis in one place, so the month's numbers exist while the month is still running. It is built and complete, not yet publicly deployed.",
+    },
+    faqs: [
+      {
+        q: "What does Hotel Management AI cover?",
+        a:
+          "Hotel Management AI covers menu and table management, warehouse and inventory tracking, billing and profit-loss analysis, employee salary and advance tracking, and a unified analytics dashboard across all of it.",
+      },
+      {
+        q: "Is Hotel Management AI only for hotels?",
+        a:
+          "No. Hotel Management AI is built for independent restaurants, for small and mid-size hotels, and for multi-outlet food businesses alike.",
+      },
+      {
+        q: "How is Hotel Management AI different from a billing system?",
+        a:
+          "Hotel Management AI covers the back office as well as the counter. Most systems at this price point stop at billing and leave inventory, payroll and profitability to a spreadsheet.",
+      },
+      {
+        q: "When do the month's numbers become available in Hotel Management AI?",
+        a:
+          "While the month is still running. Hotel Management AI keeps billing, stock, staff advances and profit and loss in one system instead of reconciling four separate records several weeks after the month has ended.",
+      },
+      {
+        q: "Can I use Hotel Management AI today?",
+        a:
+          "Hotel Management AI is built and complete but not yet publicly deployed. SRAI Systems will show the working product on a call.",
+      },
+    ],
+    replaces:
+      "A billing system, a stock register, staff advances on paper, and a profitability figure that arrives weeks late.",
+    lastUpdated: "2026-09-23",
     seo: {
       title: "Hotel Management AI — operations software for hotels and restaurants",
       description:
@@ -345,6 +486,39 @@ export const products: Product[] = [
     url: null,
     icon: "Lock",
     related: ["thecrows", "foodieflow"],
+    answer: {
+      question: "What is ModGuardian?",
+      body:
+        "ModGuardian is a content moderation pipeline built by SRAI Systems for platforms carrying user-generated content. Moderation rules drive automated actions and escalation, every decision is written to a full audit trail, and a changed rule can be re-run and backfilled over content already processed. ModGuardian is built and complete, not yet publicly deployed.",
+    },
+    faqs: [
+      {
+        q: "Why does ModGuardian record every moderation decision?",
+        a:
+          "Because a moderation decision that cannot be explained or re-run is a decision a platform cannot defend — to a user, to a partner, or to a regulator. ModGuardian writes every decision to a full audit trail for exactly that reason.",
+      },
+      {
+        q: "Can ModGuardian apply a new rule to content it already processed?",
+        a:
+          "Yes. ModGuardian supports re-run and backfill, so a changed rule can be applied to past content. Most tooling at this level cannot, and a rule change that only affects the future solves half the problem.",
+      },
+      {
+        q: "Does ModGuardian need a human reviewing everything?",
+        a:
+          "No. ModGuardian runs automated actions from its rules and escalates the cases that need a person, rather than queueing every item for human review.",
+      },
+      {
+        q: "Who is ModGuardian for?",
+        a:
+          "ModGuardian is built for marketplaces and community platforms, for products carrying user-generated content, and for teams with trust and safety obligations.",
+      },
+      {
+        q: "Can I use ModGuardian today?",
+        a:
+          "ModGuardian is built and complete but not yet publicly deployed. SRAI Systems will walk through the working pipeline on request.",
+      },
+    ],
+    lastUpdated: "2026-09-23",
     seo: {
       title: "ModGuardian — AI content moderation with audit trails",
       description:
@@ -385,6 +559,41 @@ export const products: Product[] = [
     url: null,
     icon: "Shield",
     related: ["sraiauctions", "modguardian"],
+    answer: {
+      question: "What is TheCrows?",
+      body:
+        "TheCrows is a trust and escrow system from SRAI Systems that lets two parties who have never met transact safely without handing over full identity. Temporary identities, a trust score engine with its own audit trail, and an escrow lifecycle — fund, start work, release or dispute — carry the risk instead. TheCrows is built and complete, not yet publicly deployed.",
+    },
+    faqs: [
+      {
+        q: "How does TheCrows make a transaction safe without identity verification?",
+        a:
+          "A trust score and an escrow lifecycle carry the risk instead of an identity document. TheCrows holds funds while the work is done, and release or dispute is recorded against a durable trust history.",
+      },
+      {
+        q: "What is a temporary identity in TheCrows?",
+        a:
+          "TheCrows lets a party transact under a temporary identity rather than a full one, so each side hands over no more than the transaction actually requires. The trust score, not the document, is what the other side relies on.",
+      },
+      {
+        q: "How does escrow work in TheCrows?",
+        a:
+          "TheCrows runs a three-stage escrow lifecycle: fund, start work, then release or dispute. Money is held until both sides are satisfied, and the outcome is written to the trust engine's audit trail.",
+      },
+      {
+        q: "Does TheCrows include messaging?",
+        a:
+          "Yes. TheCrows includes secure chat linked to the transaction it belongs to, alongside rate limits and referrals as anti-abuse measures.",
+      },
+      {
+        q: "Who is TheCrows for?",
+        a:
+          "TheCrows is built for peer-to-peer marketplaces, for freelance and services transactions, and for privacy-conscious users who want a safe transaction without full identity disclosure.",
+      },
+    ],
+    replaces:
+      "Full identity verification demanded from both sides as the price of a safe transaction between strangers.",
+    lastUpdated: "2026-09-23",
     seo: {
       title: "TheCrows — trust scores and escrow for private transactions",
       description:
@@ -427,6 +636,41 @@ export const products: Product[] = [
     url: null,
     icon: "Gavel",
     related: ["thecrows", "smartbhoomi"],
+    answer: {
+      question: "What is SRAI Auctions?",
+      body:
+        "SRAI Auctions is a live bidding platform from SRAI Systems, built with Indian agricultural traders in mind. Sellers list a lot in minutes, buyers bid in real time against a countdown, trust scores sit on both sides, and escrow holds the money until both parties are satisfied. SRAI Auctions is built and complete, not yet publicly deployed.",
+    },
+    faqs: [
+      {
+        q: "How quickly can a seller list a lot on SRAI Auctions?",
+        a:
+          "In minutes. SRAI Auctions is built so an auction can be created and listed quickly, which matters most for perishable or variable-quality goods that cannot wait for a slow listing process.",
+      },
+      {
+        q: "How does settlement work on SRAI Auctions?",
+        a:
+          "Escrow holds the buyer's money until both sides are satisfied. SRAI Auctions builds escrow-backed settlement and buyer and seller trust scores into the platform rather than bolting them on afterwards.",
+      },
+      {
+        q: "Is SRAI Auctions only for agricultural goods?",
+        a:
+          "No. SRAI Auctions was built with agricultural traders and produce sellers in mind, and also serves equipment and goods sellers and buyers sourcing at volume.",
+      },
+      {
+        q: "What does a bidder see during an auction?",
+        a:
+          "SRAI Auctions runs real-time live bidding with countdown timers, category browsing and smart search, and bid history and auction analytics, in a mobile-first interface.",
+      },
+      {
+        q: "Can I use SRAI Auctions today?",
+        a:
+          "SRAI Auctions is built and complete but not yet publicly deployed. A working demo of the bidding mechanic runs in the browser on sraisystems.in, and SRAI Systems will show the full product on a call.",
+      },
+    ],
+    replaces:
+      "Selling to whichever single buyer is standing in front of you, at whatever price they offer.",
+    lastUpdated: "2026-09-23",
     seo: {
       title: "SRAI Auctions — live bidding with escrow settlement",
       description:
@@ -466,6 +710,41 @@ export const products: Product[] = [
     url: null,
     icon: "UtensilsCrossed",
     related: ["hotelai", "smartbhoomi"],
+    answer: {
+      question: "What is FoodieFlow?",
+      body:
+        "FoodieFlow is a hyperlocal food platform from SRAI Systems for the Indian towns and sub-districts that national aggregators do not serve. Eaters discover local restaurants and home kitchens, vendors onboard themselves and see the demand they are actually serving, and the community does the recommending. FoodieFlow is built and complete, not yet publicly deployed.",
+    },
+    faqs: [
+      {
+        q: "Why does FoodieFlow focus on towns rather than metros?",
+        a:
+          "Outside the Indian metros the national aggregators are absent or uneconomic, so a good local kitchen is discoverable only by word of mouth. FoodieFlow is built for those towns, with economics that work at that scale rather than a metro model scaled down.",
+      },
+      {
+        q: "What does FoodieFlow give a vendor?",
+        a:
+          "FoodieFlow lets a vendor onboard themselves, manage their own listing, and see an analytics dashboard of the demand they are serving — which for a local kitchen is usually the first time that information has existed.",
+      },
+      {
+        q: "How do eaters find places on FoodieFlow?",
+        a:
+          "Through hyperlocal discovery and community-driven recommendations inside their own town or sub-district.",
+      },
+      {
+        q: "Who is FoodieFlow for?",
+        a:
+          "FoodieFlow is built for local restaurants and home kitchens, for town and sub-district communities, and for food businesses outside metro aggregator coverage.",
+      },
+      {
+        q: "Can I use FoodieFlow today?",
+        a:
+          "FoodieFlow is built and complete but not yet publicly deployed. SRAI Systems will show the working product on request.",
+      },
+    ],
+    replaces:
+      "Word-of-mouth as the only way a local kitchen gets discovered, and no idea who its customers are.",
+    lastUpdated: "2026-09-23",
     seo: {
       title: "FoodieFlow — hyperlocal food discovery and vendor management",
       description:
@@ -555,6 +834,46 @@ export const products: Product[] = [
     url: null,
     icon: "LineChart",
     related: ["fundos", "thecrows"],
+    answer: {
+      question: "What is SRAI Quant?",
+      body:
+        "SRAI Quant is a systematic trading platform for Indian markets, built by SRAI Systems against the SEBI framework that governs retail algorithmic trading. Strategies are written as readable rules, backtested with slippage and cost assumptions, paper traded on live data, and only then allowed to place broker orders inside enforced risk limits. SRAI Quant is not publicly available yet.",
+    },
+    faqs: [
+      {
+        q: "Is SRAI Quant a black box?",
+        a:
+          "No. SRAI Quant strategies are defined as explicit rules that can be read back, and the system records why each signal fired. Most retail algo products in India are black boxes sold on past returns; SRAI Quant is built the other way round.",
+      },
+      {
+        q: "Does SRAI Quant place real orders straight away?",
+        a:
+          "No. SRAI Quant runs every strategy against historical data first, then against live market data with simulated fills, and promotion to live order placement is a deliberate action rather than a default.",
+      },
+      {
+        q: "What risk controls does SRAI Quant enforce?",
+        a:
+          "Position sizing, a per-trade stop-loss, a daily loss cap and a manual kill switch, all enforced by the execution layer. A strategy cannot trade its way past its own limits.",
+      },
+      {
+        q: "How does SRAI Quant handle SEBI's retail algo framework?",
+        a:
+          "SEBI's framework requires exchange-issued order identifiers, broker-controlled API access with per-client keys and IP whitelisting, and vendor empanelment with exchanges. SRAI Quant is being built against those requirements rather than retrofitted to them.",
+      },
+      {
+        q: "Can I see what a strategy did at a specific time?",
+        a:
+          "Yes. SRAI Quant records signals, orders, fills, rejections and risk-limit trips, with a unique identifier on every order, so a whole session can be reconstructed afterwards.",
+      },
+      {
+        q: "When will SRAI Quant be available?",
+        a:
+          "SRAI Quant is still being built and is not publicly available. SRAI Systems has not published a launch date. A working demo of the backtesting mechanic runs in the browser on sraisystems.in in the meantime.",
+      },
+    ],
+    replaces:
+      "A retail algo black box you cannot inspect, or a spreadsheet you cannot automate.",
+    lastUpdated: "2026-09-23",
     seo: {
       title: "SRAI Quant — systematic trading and execution for Indian markets",
       description:
