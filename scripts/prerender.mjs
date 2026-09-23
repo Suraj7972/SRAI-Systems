@@ -63,6 +63,7 @@ const {
   descriptionTag,
   buildSitemap,
   buildRobots,
+  buildLlmsTxt,
 } = server;
 
 const template = readFileSync(join(DIST, "index.html"), "utf8");
@@ -195,8 +196,19 @@ const lastmod = new Date().toISOString().slice(0, 10);
 emit(join(DIST, "sitemap.xml"), buildSitemap(lastmod));
 emit(join(DIST, "robots.txt"), buildRobots());
 
+/* llms.txt — generated here because the route walk above already exists.
+ *
+ * Honest assessment, so nobody mistakes this for a strategy: no major AI
+ * provider has publicly committed to reading llms.txt, Google has advised
+ * against relying on it, and there is no credible evidence of crawlers fetching
+ * it. It is emitted because it costs one line next to the sitemap. It is not
+ * linked from navigation, not tuned, and not a feature of this site. See the
+ * comment on buildLlmsTxt() in src/lib/seo.ts.
+ */
+emit(join(DIST, "llms.txt"), buildLlmsTxt());
+
 console.log(
-  `\n${green("✓")} ${prerenderRoutes.length + 1} documents, sitemap.xml and robots.txt written to dist/`,
+  `\n${green("✓")} ${prerenderRoutes.length + 1} documents, sitemap.xml, robots.txt and llms.txt written to dist/`,
 );
 console.log(dim(`  ${totalStripped} framer-motion entry-state declarations neutralised`));
 console.log(
