@@ -3,6 +3,10 @@ import { Link, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Send, CheckCircle, Mail, Copy, Check, AlertTriangle, Loader2, MapPin, ShieldCheck } from "lucide-react";
 import Layout from "@/components/Layout";
+import AnswerBlock from "@/components/AnswerBlock";
+import LastUpdated from "@/components/LastUpdated";
+import { answerForPath } from "@/data/answers";
+import { CONTENT_UPDATED } from "@/routes";
 import SectionReveal from "@/components/SectionReveal";
 import ProductIcon from "@/components/ProductIcon";
 import { products } from "@/data/srai";
@@ -210,6 +214,11 @@ const Contact = () => {
                   <span className="sr-only">{emailCopied ? "Email address copied" : "Copy email address"}</span>
                 </button>
               </SectionReveal>
+
+              <div className="mb-8 pb-8 border-b border-[hsl(var(--line-soft))]">
+                <AnswerBlock answer={answerForPath("/contact")} />
+                <LastUpdated date={CONTENT_UPDATED} className="mt-5" />
+              </div>
 
               {/* Quick intent chips */}
               <SectionReveal delay={0.05}>

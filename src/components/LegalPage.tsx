@@ -2,6 +2,9 @@ import { ReactNode, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Layout from "./Layout";
 import SectionReveal from "./SectionReveal";
+import AnswerBlock from "./AnswerBlock";
+import LastUpdated from "./LastUpdated";
+import type { Answer } from "@/data/answers";
 
 export interface LegalSection {
   id: string;
@@ -13,7 +16,10 @@ interface LegalPageProps {
   title: string;
   documentTitle: string;
   intro: string;
+  /** ISO date the policy text itself last changed. Also its JSON-LD dateModified. */
   lastUpdated: string;
+  /** The question-and-answer lede, rendered before the document body. */
+  answer: Answer;
   sections: LegalSection[];
 }
 
@@ -25,7 +31,7 @@ interface LegalPageProps {
  * make no claim of compliance with any specific statute. The review banner is
  * deliberate and should be removed only once counsel has signed the text off.
  */
-const LegalPage = ({ title, documentTitle, intro, lastUpdated, sections }: LegalPageProps) => {
+const LegalPage = ({ title, documentTitle, intro, lastUpdated, answer, sections }: LegalPageProps) => {
   useEffect(() => {
     document.title = documentTitle;
   }, [documentTitle]);
@@ -39,7 +45,7 @@ const LegalPage = ({ title, documentTitle, intro, lastUpdated, sections }: Legal
               Legal
             </span>
             <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-3">{title}</h1>
-            <p className="text-sm text-muted-foreground mb-2">Last updated: {lastUpdated}</p>
+            <LastUpdated date={lastUpdated} className="mb-2" />
             <p className="text-muted-foreground mb-8">{intro}</p>
 
             <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-5 py-4 mb-10">
@@ -51,6 +57,11 @@ const LegalPage = ({ title, documentTitle, intro, lastUpdated, sections }: Legal
               </p>
             </div>
           </SectionReveal>
+
+          {/* The answer block: first thing in the document body. */}
+          <div className="mb-12">
+            <AnswerBlock answer={answer} />
+          </div>
 
           {/* Contents */}
           <SectionReveal delay={0.05}>

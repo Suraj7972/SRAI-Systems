@@ -2,7 +2,11 @@ import { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
 import SectionReveal from "@/components/SectionReveal";
 import ProductCard from "@/components/ProductCard";
+import AnswerBlock from "@/components/AnswerBlock";
+import LastUpdated from "@/components/LastUpdated";
 import { products, type ProductStatus } from "@/data/srai";
+import { answerForPath } from "@/data/answers";
+import { CONTENT_UPDATED } from "@/routes";
 
 const FILTERS = ["All", "Live", "Ready", "In development"] as const;
 type Filter = (typeof FILTERS)[number];
@@ -43,6 +47,11 @@ const Products = () => {
               {liveCount} publicly available · {products.length - liveCount} built and available for a walkthrough
             </p>
           </SectionReveal>
+
+          <div className="mb-12">
+            <AnswerBlock answer={answerForPath("/products")} />
+            <LastUpdated date={CONTENT_UPDATED} className="mt-6" />
+          </div>
 
           <SectionReveal delay={0.08}>
             <div className="flex flex-wrap gap-2 mb-10" role="group" aria-label="Filter products by status">

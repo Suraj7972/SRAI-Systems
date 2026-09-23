@@ -4,6 +4,10 @@ import { X, Handshake, FlaskConical, TrendingUp, ArrowRight } from "lucide-react
 import Layout from "@/components/Layout";
 import SectionReveal from "@/components/SectionReveal";
 import { Link } from "react-router-dom";
+import AnswerBlock from "@/components/AnswerBlock";
+import LastUpdated from "@/components/LastUpdated";
+import { answerForPath } from "@/data/answers";
+import { CONTENT_UPDATED } from "@/routes";
 
 const partnerTypes = [
   {
@@ -45,6 +49,11 @@ const Partnerships = () => {
               We're looking for partners, pilots, and believers who share our commitment to building real technology for real impact.
             </p>
           </SectionReveal>
+
+          <div className="mb-16 pb-14 border-b border-[hsl(var(--line-soft))]">
+            <AnswerBlock answer={answerForPath("/partnerships")} />
+            <LastUpdated date={CONTENT_UPDATED} className="mt-6" />
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-20">
             {partnerTypes.map((pt, i) => (

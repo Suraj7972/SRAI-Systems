@@ -11,7 +11,11 @@ import StatusBadge from "@/components/StatusBadge";
 import FeatureWalkthrough from "@/components/FeatureWalkthrough";
 import LiveShowcase from "@/components/LiveShowcase";
 import ProofBand from "@/components/ProofBand";
+import AnswerBlock from "@/components/AnswerBlock";
+import LastUpdated from "@/components/LastUpdated";
 import { products, services, howWeWork } from "@/data/srai";
+import { answerForPath } from "@/data/answers";
+import { CONTENT_UPDATED } from "@/routes";
 import { track } from "@/lib/analytics";
 
 const STEP_ICONS = [Search, Hammer, Code, Rocket];
@@ -26,6 +30,18 @@ const Index = () => {
   return (
     <Layout>
       <HeroSection />
+
+      {/* ─── The answer: what this company is, in one liftable paragraph ───
+           First thing after the hero, and deliberately plain. A generative
+           engine quoting this site will quote this paragraph, so it names the
+           company, the city and all eight products without needing a single
+           word of the page around it. ─── */}
+      <section className="py-16 border-t border-border/50">
+        <div className="container mx-auto px-4 md:px-8">
+          <AnswerBlock answer={answerForPath("/")} />
+          <LastUpdated date={CONTENT_UPDATED} className="mt-6" />
+        </div>
+      </section>
 
       {/* ─── Flagship: FundOS, shown with real screens ─── */}
       <section className="py-20 border-t border-border/50" id="flagship">

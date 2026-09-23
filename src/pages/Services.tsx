@@ -4,7 +4,12 @@ import { ArrowRight, Check, Clock, IndianRupee, Target, Users } from "lucide-rea
 import Layout from "@/components/Layout";
 import SectionReveal from "@/components/SectionReveal";
 import ProductIcon from "@/components/ProductIcon";
+import AnswerBlock from "@/components/AnswerBlock";
+import LastUpdated from "@/components/LastUpdated";
+import ProductMentions from "@/components/ProductMentions";
 import { services, howWeWork, engagementModels } from "@/data/srai";
+import { answerForPath } from "@/data/answers";
+import { CONTENT_UPDATED } from "@/routes";
 import { track } from "@/lib/analytics";
 
 const Services = () => {
@@ -47,6 +52,14 @@ const Services = () => {
         </div>
       </section>
 
+      {/* ── The answer: what this page is, in one liftable paragraph ── */}
+      <section className="py-14 border-t border-[hsl(var(--line-soft))]">
+        <div className="container mx-auto px-4 md:px-8">
+          <AnswerBlock answer={answerForPath("/services")} />
+          <LastUpdated date={CONTENT_UPDATED} className="mt-6" />
+        </div>
+      </section>
+
       {/* ── The six offers ── */}
       <section className="pb-16 border-t border-[hsl(var(--line-soft))] pt-16">
         <div className="container mx-auto px-4 md:px-8">
@@ -78,7 +91,10 @@ const Services = () => {
                       { icon: Check, term: "What you get", def: s.deliverable },
                       { icon: Clock, term: "Typical scope", def: s.scope },
                       { icon: IndianRupee, term: "How it's priced", def: s.pricing },
-                      { icon: Target, term: "Our proof", def: s.proof },
+                      // The proof line names real products; ProductMentions turns
+                      // those names into links, so /services points back at the
+                      // products that demonstrate each capability in prose.
+                      { icon: Target, term: "Our proof", def: <ProductMentions text={s.proof} /> },
                     ].map((row) => (
                       <div key={row.term} className="flex gap-3">
                         <row.icon className="w-3.5 h-3.5 mt-1 shrink-0 text-muted-foreground/70" aria-hidden="true" />

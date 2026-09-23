@@ -36,6 +36,9 @@ export type AnalyticsEvent =
   | "contact_form_failed"
   | "product_waitlist_cta_click"
   | "outbound_product_click"
+  | "careers_page_view"
+  | "career_role_open"
+  | "career_apply_click"
   | "page_view";
 
 /**

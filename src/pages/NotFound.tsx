@@ -3,9 +3,12 @@ import { Link, useLocation } from "react-router-dom";
 import { ArrowRight, Home } from "lucide-react";
 import Layout from "@/components/Layout";
 import SectionReveal from "@/components/SectionReveal";
+import AnswerBlock from "@/components/AnswerBlock";
+import { answerForPath } from "@/data/answers";
+import { products } from "@/data/srai";
 
 const suggestions = [
-  { to: "/products", label: "Products", hint: "All seven SRAI platforms" },
+  { to: "/products", label: "Products", hint: `All ${products.length} SRAI platforms` },
   { to: "/services", label: "Services", hint: "AI engineering and consulting" },
   { to: "/about", label: "About", hint: "Who we are and how we work" },
   { to: "/partnerships", label: "Partnerships", hint: "Pilots, partners and investors" },
@@ -53,6 +56,10 @@ const NotFound = () => {
               </Link>
             </div>
           </SectionReveal>
+
+          <div className="mb-12">
+            <AnswerBlock answer={answerForPath("/404")} />
+          </div>
 
           <SectionReveal delay={0.1}>
             <h2 className="text-sm font-semibold text-foreground mb-4">Try one of these instead</h2>
